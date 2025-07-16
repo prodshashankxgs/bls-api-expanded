@@ -49,7 +49,7 @@ class ErrorResponse(BaseModel):
 
 
 class InflationDashboard(BaseModel):
-    snapshot_date: str
+    snapshot_date: date
     inflation_type: str
     key_indicators: Dict[str, Dict[str, Any]]
     trends: Dict[str, Any]
@@ -57,5 +57,5 @@ class InflationDashboard(BaseModel):
 
 
 class RegionalCPIResponse(BaseModel):
-    regional_cpi: Dict[str, Any]
+    regional_cpi: Dict[str, SeriesResponse]
     available_regions: List[str]
