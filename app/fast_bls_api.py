@@ -3,9 +3,14 @@ import os
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import glob
 from dataclasses import dataclass
+
+# Import the new standardized schema
+from .standardized_schema import (
+    standardize_data, DataSource, StandardizedDataFormatter
+)
 
 @dataclass
 class BLSDataPoint:
@@ -23,6 +28,7 @@ class FastBLSAPI:
     def __init__(self, cache_dir: str = "cached_data", max_workers: int = 10):
         self.cache_dir = cache_dir
         self.max_workers = max_workers
+        self.formatter = StandardizedDataFormatter()
         
         # Common series mappings
         self.series_map = {
@@ -157,16 +163,17 @@ class FastBLSAPI:
         """Filter data points by year range"""
         return [dp for dp in data_points if start_year <= dp.year <= end_year]
     
-    def load_data(self, ticker: str, date: Optional[str] = None) -> List[Dict]:
+    def load_data(self, ticker: str, date: Optional[str] = None, standardized: bool = True) -> Union[List[Dict], Dict]:
         """
         Load BLS data for given ticker and date range
         
         Args:
             ticker: CPI/PPI ticker (e.g., 'cpi', 'ppi', 'cpi_core', 'CPIAUCSL')
             date: Date range (e.g., '2023', '2020-2023', 'last 3 years') or None for last 3 years
+            standardized: Whether to return standardized professional format
             
         Returns:
-            List of data points as dictionaries
+            Standardized professional response dict or legacy list of dictionaries
         """
         start_time = time.time()
         
@@ -176,31 +183,56 @@ class FastBLSAPI:
         
         print(f"Loading {series_id} data for {start_year}-{end_year}...")
         
-        # Load from cache
-        all_data = self._load_series_from_cache(series_id)
-        
-        # Filter by date range
-        filtered_data = self._filter_by_date_range(all_data, start_year, end_year)
-        
-        # Convert to dictionaries and sort by date
-        result = []
-        for dp in filtered_data:
-            result.append({
-                'series_id': dp.series_id,
-                'date': dp.date,
-                'value': dp.value,
-                'period': dp.period,
-                'year': dp.year,
-                'month': dp.month
-            })
-        
-        # Sort by year and month (most recent first)
-        result.sort(key=lambda x: (x['year'], x['month'] or 0), reverse=True)
-        
-        elapsed = time.time() - start_time
-        print(f"✅ Loaded {len(result)} data points in {elapsed:.2f} seconds")
-        
-        return result
+        try:
+            # Load from cache
+            all_data = self._load_series_from_cache(series_id)
+            
+            # Filter by date range
+            filtered_data = self._filter_by_date_range(all_data, start_year, end_year)
+            
+            # Convert to dictionaries and sort by date
+            result = []
+            for dp in filtered_data:
+                result.append({
+                    'series_id': dp.series_id,
+                    'date': dp.date,
+                    'value': dp.value,
+                    'period': dp.period,
+                    'year': dp.year,
+                    'month': dp.month
+                })
+            
+            # Sort by year and month (most recent first)
+            result.sort(key=lambda x: (x['year'], x['month'] or 0), reverse=True)
+            
+            elapsed = time.time() - start_time
+            print(f"✅ Loaded {len(result)} data points in {elapsed:.2f} seconds")
+            
+            # Return standardized format or legacy format
+            if standardized:
+                return self.formatter.format_response(
+                    raw_data=result,
+                    series_id=series_id,
+                    source=DataSource.CACHED,
+                    start_time=start_time
+                )
+            else:
+                return result
+                
+        except Exception as e:
+            error_msg = f"Failed to load {series_id}: {str(e)}"
+            print(f"❌ {error_msg}")
+            
+            if standardized:
+                return self.formatter.format_response(
+                    raw_data=[],
+                    series_id=series_id,
+                    source=DataSource.CACHED,
+                    start_time=start_time,
+                    error=error_msg
+                )
+            else:
+                return []
     
     def load_multiple(self, tickers: List[str], date: Optional[str] = None) -> Dict[str, List[Dict]]:
         """
@@ -276,20 +308,21 @@ class FastBLSAPI:
             "years_available": sorted(list(set(dp.year for dp in data)))
         }
 
-# Convenience function for simple usage
-def load_data(ticker: str, date: Optional[str] = None) -> List[Dict]:
+# Backward compatibility function
+def load_data(ticker: str, date: Optional[str] = None, standardized: bool = False) -> Union[List[Dict], Dict]:
     """
-    Simple function to load BLS data
+    Simple function to load BLS data (cached version)
     
     Args:
-        ticker: CPI/PPI ticker (e.g., 'cpi', 'ppi', 'cpi_core')
-        date: Date range (e.g., '2023', '2020-2023', 'last 3 years')
+        ticker: Economic indicator ticker
+        date: Date range specification
+        standardized: Whether to return professional standardized format
         
     Returns:
-        List of data points
+        Economic data in specified format
     """
     api = FastBLSAPI()
-    return api.load_data(ticker, date)
+    return api.load_data(ticker, date, standardized=standardized)
 
 # Example usage
 if __name__ == "__main__":

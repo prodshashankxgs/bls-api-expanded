@@ -2,12 +2,17 @@ import requests
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import re
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
+
+# Import the new standardized schema
+from .standardized_schema import (
+    standardize_data, DataSource, StandardizedDataFormatter
+)
 
 @dataclass
 class BLSDataPoint:
@@ -24,6 +29,7 @@ class LiveBLSScraper:
     
     def __init__(self, max_workers: int = 5):
         self.max_workers = max_workers
+        self.formatter = StandardizedDataFormatter()
         
         # Alternative scraping URLs that work better
         self.data_urls = {
@@ -269,16 +275,17 @@ class LiveBLSScraper:
         
         return current_year - 2, current_year
     
-    def load_data(self, ticker: str, date: Optional[str] = None) -> List[Dict]:
+    def load_data(self, ticker: str, date: Optional[str] = None, standardized: bool = True) -> Union[List[Dict], Dict]:
         """
         Live scrape BLS/economic data from websites (NO cached data, NO BLS API)
         
         Args:
             ticker: Economic indicator ticker (e.g., 'cpi', 'ppi', 'unemployment')
             date: Date range (e.g., '2023', '2020-2023', 'last 3 years')
+            standardized: Whether to return standardized professional format
             
         Returns:
-            List of freshly scraped data points
+            Standardized professional response dict or legacy list of dictionaries
         """
         start_time = time.time()
         ticker_lower = ticker.lower().strip()
@@ -286,72 +293,104 @@ class LiveBLSScraper:
         
         print(f"🚀 LIVE SCRAPING {ticker.upper()} data for {start_year}-{end_year} (NO CACHE, NO API)")
         
-        all_data = []
+        # Determine series ID for standardized response
+        series_map = {
+            'cpi': 'CPIAUCSL',
+            'cpi_core': 'CPILFESL', 
+            'ppi': 'PPIFIS',
+            'unemployment': 'UNRATE'
+        }
+        series_id = series_map.get(ticker_lower, ticker.upper())
         
-        # Method 1: Try FRED CSV (most reliable)
-        fred_data = self._scrape_fred_csv(ticker_lower, start_year, end_year)
-        all_data.extend(fred_data)
-        
-        # Method 2: Try BLS beta site if FRED failed
-        if not all_data:
-            bls_data = self._scrape_bls_beta(ticker_lower, start_year, end_year)
-            all_data.extend(bls_data)
-        
-        # Method 3: Try alternative sources if both failed
-        if not all_data:
-            alt_data = self._scrape_alternative_apis(ticker_lower, start_year, end_year)
-            all_data.extend(alt_data)
-        
-        # Remove duplicates and filter by date range
-        filtered_data = []
-        seen = set()
-        
-        for point in all_data:
-            if start_year <= point.year <= end_year:
-                key = (point.year, point.month, point.value)
-                if key not in seen:
-                    seen.add(key)
-                    filtered_data.append(point)
-        
-        # Convert to dictionaries and sort
-        result = []
-        for dp in filtered_data:
-            result.append({
-                'series_id': dp.series_id,
-                'date': dp.date,
-                'value': dp.value,
-                'period': dp.period,
-                'year': dp.year,
-                'month': dp.month,
-                'scraped_at': datetime.now().isoformat(),  # Mark as freshly scraped
-                'source': 'live_scraped'
-            })
-        
-        # Sort by year and month (most recent first)
-        result.sort(key=lambda x: (x['year'], x['month'] or 0), reverse=True)
-        
-        elapsed = time.time() - start_time
-        print(f"✅ LIVE SCRAPED {len(result)} fresh data points in {elapsed:.2f} seconds")
-        
-        if not result:
-            print("⚠️  No data found - all scraping methods failed")
-        
-        return result
+        try:
+            all_data = []
+            
+            # Method 1: Try FRED CSV (most reliable)
+            fred_data = self._scrape_fred_csv(ticker_lower, start_year, end_year)
+            all_data.extend(fred_data)
+            
+            # Method 2: Try BLS beta site if FRED failed
+            if not all_data:
+                bls_data = self._scrape_bls_beta(ticker_lower, start_year, end_year)
+                all_data.extend(bls_data)
+            
+            # Method 3: Try alternative sources if both failed
+            if not all_data:
+                alt_data = self._scrape_alternative_apis(ticker_lower, start_year, end_year)
+                all_data.extend(alt_data)
+            
+            # Remove duplicates and filter by date range
+            filtered_data = []
+            seen = set()
+            
+            for point in all_data:
+                if start_year <= point.year <= end_year:
+                    key = (point.year, point.month, point.value)
+                    if key not in seen:
+                        seen.add(key)
+                        filtered_data.append(point)
+            
+            # Convert to dictionaries and sort
+            result = []
+            for point in filtered_data:
+                result.append({
+                    'series_id': point.series_id,
+                    'date': point.date,
+                    'value': point.value,
+                    'period': point.period,
+                    'year': point.year,
+                    'month': point.month,
+                    'scraped_at': datetime.now().isoformat(),
+                    'source': 'live_scraped'
+                })
+            
+            # Sort by date (most recent first)
+            result.sort(key=lambda x: (x['year'], x['month'] or 0), reverse=True)
+            
+            elapsed = time.time() - start_time
+            print(f"✅ LIVE SCRAPED {len(result)} fresh data points in {elapsed:.2f} seconds")
+            
+            # Return standardized format or legacy format
+            if standardized:
+                return self.formatter.format_response(
+                    raw_data=result,
+                    series_id=series_id,
+                    source=DataSource.LIVE_SCRAPED,
+                    start_time=start_time
+                )
+            else:
+                return result
+                
+        except Exception as e:
+            error_msg = f"Failed to scrape {ticker}: {str(e)}"
+            print(f"❌ {error_msg}")
+            
+            if standardized:
+                return self.formatter.format_response(
+                    raw_data=[],
+                    series_id=series_id,
+                    source=DataSource.LIVE_SCRAPED,
+                    start_time=start_time,
+                    error=error_msg
+                )
+            else:
+                return []
 
-# Convenience function for simple usage
-def load_data(ticker: str, date: Optional[str] = None) -> List[Dict]:
+# Backward compatibility function  
+def load_data(ticker: str, date: Optional[str] = None, standardized: bool = False) -> Union[List[Dict], Dict]:
     """
-    Live scrape economic data from websites (NO cached data, NO BLS API)
+    Simple function to live scrape BLS data
     
     Args:
-        ticker: Economic indicator ticker (e.g., 'cpi', 'ppi', 'unemployment')
-        date: Date range (e.g., '2023', '2020-2023', 'last 3 years')
+        ticker: Economic indicator ticker
+        date: Date range specification  
+        standardized: Whether to return professional standardized format
         
     Returns:
-        List of freshly scraped data points
+        Freshly scraped economic data in specified format
     """
     scraper = LiveBLSScraper()
-    return scraper.load_data(ticker, date)
+    return scraper.load_data(ticker, date, standardized=standardized)
 
 # Example usage
 if __name__ == "__main__":
