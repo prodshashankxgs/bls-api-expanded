@@ -2,13 +2,18 @@
 
 A Python API for quickly loading BLS (Bureau of Labor Statistics) economic data like CPI and PPI with just one function call: `load_data(ticker, date)`.
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Installation
 ```bash
-git clone <this-repo>
+git clone https://github.com/yourusername/bls-scraper-api.git
 cd "BLS Scraper API"
 pip install -r requirements.txt
+```
+
+### Test Installation
+```bash
+python -c "from app.fast_bls_api import load_data; print('✅ Installation successful!')"
 ```
 
 ### Simple Usage
@@ -19,6 +24,17 @@ from app.fast_bls_api import load_data
 cpi_data = load_data('cpi', '2020-2023')
 print(f"Latest CPI: {cpi_data[0]['value']} ({cpi_data[0]['date']})")
 ```
+
+### 📚 Complete Documentation
+
+**For New Users:**
+- **[Quick Start Guide](QUICK_START_GUIDE.md)** - Get running in 5 minutes
+- **[Integration Examples](example_integrations.py)** - Copy-paste code examples  
+- **[API Reference](API_REFERENCE.md)** - Complete function documentation
+
+**For Developers:**
+- **[Standardized Schema](STANDARDIZED_DATA_SCHEMA.md)** - Professional data format
+- **[Demo Dashboard](simple_bls_dashboard.py)** - Working example with analytics
 
 ## Two Data Sources Available
 
@@ -133,19 +149,37 @@ python app/live_bls_scraper.py
 python simple_demo.py
 ```
 
-## Files Structure
+## 📁 Project Structure
 
 ```
 BLS Scraper API/
-├── app/
-│   ├── fast_bls_api.py      # Fast cached data API
-│   └── live_bls_scraper.py  # Live web scraping API
-├── cached_data/             # Pre-cached BLS data files
-├── requirements.txt         # Python dependencies
-├── final_test.py           # Performance test
-├── simple_demo.py          # Usage examples
-└── SIMPLE_API_USAGE.md     # Detailed usage guide
+├── app/                              # Core API modules
+│   ├── fast_bls_api.py              # Fast cached data API (0-2ms)
+│   ├── live_bls_scraper.py          # Live web scraping (50-300ms)
+│   ├── standardized_schema.py       # Professional data format
+│   └── ultra_fresh_scraper.py       # Multi-source verification
+├── cached_data/                     # Pre-cached BLS data files
+│   ├── CPIAUCSL_latest.json        # Consumer Price Index
+│   ├── CPILFESL_latest.json        # Core CPI
+│   └── PPIFIS_latest.json          # Producer Price Index
+├── scripts/                         # Utility scripts
+├── docs/                           # Additional documentation
+├── requirements.txt                # Python dependencies (3 packages)
+├── test_installation.py           # Installation verification
+├── simple_bls_dashboard.py        # Demo dashboard with analytics
+└── example_integrations.py        # Copy-paste integration examples
 ```
+
+## 📚 Documentation Index
+
+| Document | Purpose | Target Audience |
+|----------|---------|-----------------|
+| **[QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)** | 5-minute setup guide | New users |
+| **[API_REFERENCE.md](API_REFERENCE.md)** | Complete function reference | Developers |
+| **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** | Production deployment guide | DevOps/Advanced users |
+| **[STANDARDIZED_DATA_SCHEMA.md](STANDARDIZED_DATA_SCHEMA.md)** | Professional data format | Institutional users |
+| **[example_integrations.py](example_integrations.py)** | Working code examples | All users |
+| **[test_installation.py](test_installation.py)** | Installation verification | All users |
 
 ## When to Use Which
 
