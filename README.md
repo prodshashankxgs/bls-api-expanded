@@ -1,192 +1,190 @@
-# BLS Data API
+# Simple BLS Data API
 
-A Python FastAPI wrapper for the Bureau of Labor Statistics (BLS) API that provides enhanced economic data with calculated insights and friendly series names.
+A Python API for quickly loading BLS (Bureau of Labor Statistics) economic data like CPI and PPI with just one function call: `load_data(ticker, date)`.
 
-## Features
+## Quick Start
 
-- **Friendly Series Names**: Use simple names like `unemployment`, `inflation`, `jobs`, `wages`, and `productivity` instead of complex BLS series IDs
-- **Enhanced Calculations**: Automatic month-over-month and year-over-year change calculations
-- **Trend Analysis**: Simple trend indicators (increasing, decreasing, stable)
-- **Caching**: In-memory caching for improved performance
-- **Multi-Series Comparison**: Compare two economic indicators side-by-side
-- **Economic Dashboard**: Get key economic indicators in a single call
-- **Error Handling**: Comprehensive error handling with helpful messages
-
-## Available Economic Series
-
-| Series Name | Description | Units | BLS Series ID |
-|-------------|-------------|-------|---------------|
-| `unemployment` | Unemployment Rate | Percent | LNS14000000 |
-| `inflation` | Consumer Price Index - All Urban Consumers | Index 1982-84=100 | CUUR0000SA0 |
-| `jobs` | Total Nonfarm Employment | Thousands of Persons | CES0000000001 |
-| `wages` | Average Hourly Earnings - Private Sector | Dollars per Hour | CES0500000003 |
-| `productivity` | Nonfarm Business Sector Productivity | Index 2012=100 | PRS85006092 |
-
-## Installation
-
-1. Clone the repository:
+### Installation
 ```bash
-git clone <repository-url>
-cd BLS\ Scraper\ API
+git clone <this-repo>
+cd "BLS Scraper API"
+pip install -r requirements.txt
 ```
 
-2. Create a virtual environment and install dependencies:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install fastapi uvicorn httpx python-dotenv pydantic requests
+### Simple Usage
+```python
+from app.fast_bls_api import load_data
+
+# Get CPI data for 2020-2023
+cpi_data = load_data('cpi', '2020-2023')
+print(f"Latest CPI: {cpi_data[0]['value']} ({cpi_data[0]['date']})")
 ```
 
-3. (Optional) Set up your BLS API key:
-   - Create a `.env` file in the root directory
-   - Add your BLS API key: `BLS_API_KEY=your_api_key_here`
-   - Register for a free API key at: https://www.bls.gov/developers/api_signature_v2.html
+## Two Data Sources Available
 
-## Usage
+### Option 1: Fast Cached Data (Recommended)
+**File**: `app/fast_bls_api.py`  
+**Speed**: Milliseconds  
+**Data**: Uses pre-cached BLS data from `cached_data/` folder  
 
-### Starting the Server
+```python
+from app.fast_bls_api import load_data
 
-```bash
-uvicorn app.main:app --reload
+# Lightning fast - uses cached data
+data = load_data('cpi', '2023-2024')
+# Returns data in ~1ms
 ```
 
-The API will be available at `http://localhost:8000`
+### Option 2: Live Web Scraping 
+**File**: `app/live_bls_scraper.py`  
+**Speed**: 1-3 seconds  
+**Data**: Scrapes fresh data from BLS websites every time  
 
-### API Endpoints
+```python
+from app.live_bls_scraper import load_data
 
-#### Root Endpoint
-- **GET /** - API information and available endpoints
-
-#### Health Check
-- **GET /health** - API health status and configuration
-
-#### Series Data
-- **GET /data/{series_name}** - Get enhanced data for a specific series
-  - `series_name`: One of: unemployment, inflation, jobs, wages, productivity
-  - `years`: Number of years of data (1-10, default: 3)
-  - `enhanced`: Include calculated fields (default: true)
-
-#### Series Comparison
-- **GET /compare** - Compare two economic series
-  - `series1`: First series to compare (default: unemployment)
-  - `series2`: Second series to compare (default: inflation)
-  - `years`: Years of data for comparison (1-5, default: 2)
-
-#### Economic Dashboard
-- **GET /dashboard** - Get key economic indicators in one call
-
-#### Available Series
-- **GET /series** - List all available series with descriptions
-
-#### Cache Management
-- **GET /cache/status** - View cache status
-- **DELETE /cache/clear** - Clear cached data
-
-### Example Usage
-
-```bash
-# Get unemployment data for the last 3 years
-curl http://localhost:8000/data/unemployment
-
-# Get inflation data for 2 years without enhancements
-curl http://localhost:8000/data/inflation?years=2&enhanced=false
-
-# Compare unemployment vs inflation
-curl http://localhost:8000/compare?series1=unemployment&series2=inflation
-
-# Get economic dashboard
-curl http://localhost:8000/dashboard
+# Live scraping - always fresh data
+data = load_data('cpi', '2023-2024') 
+# Takes 1-3 seconds, scrapes BLS website
 ```
 
-### Enhanced Data Fields
+## Available Data
 
-The API adds value over raw BLS data by calculating:
-- `month_change`: Month-over-month percentage change
-- `year_change`: Year-over-year percentage change
-- `trend`: Simple trend indicator (increasing, decreasing, stable)
+### Supported Tickers
+- `'cpi'` - Consumer Price Index (All Urban Consumers)
+- `'cpi_core'` - Core CPI (less food & energy)
+- `'cpi_energy'` - Energy prices
+- `'cpi_housing'` - Housing prices
+- `'ppi'` - Producer Price Index (All Manufacturing)
+- `'ppi_core'` - Core PPI
+- `'unemployment'` - Unemployment Rate
 
-### Response Format
+### Date Formats
+- `'2023'` - Single year
+- `'2020-2023'` - Year range  
+- `'last 3 years'` - Recent years
+- `None` - Default (last 3 years)
 
-```json
-{
-  "series_name": "unemployment",
-  "series_id": "LNS14000000",
-  "title": "Unemployment Rate",
-  "units": "Percent",
-  "data": [
+## Example Usage
+
+```python
+#!/usr/bin/env python3
+
+# Option 1: Fast cached data
+from app.fast_bls_api import load_data as load_cached
+
+# Option 2: Live web scraping  
+from app.live_bls_scraper import load_data as load_live
+
+def main():
+    print("=== Fast Cached Data ===")
+    cpi_cached = load_cached('cpi', '2023-2024')
+    if cpi_cached:
+        print(f"CPI: {cpi_cached[0]['value']} ({cpi_cached[0]['date']})")
+        print(f"Found {len(cpi_cached)} data points")
+    
+    print("\n=== Live Web Scraping ===")
+    cpi_live = load_live('cpi', '2024')
+    if cpi_live:
+        print(f"Fresh CPI: {cpi_live[0]['value']} ({cpi_live[0]['date']})")
+        print(f"Scraped at: {cpi_live[0]['scraped_at']}")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Data Structure
+
+Both APIs return the same format:
+```python
+[
     {
-      "date": "2024-01-01",
-      "value": 3.9,
-      "period": "M01",
-      "year": 2024,
-      "month_change": -0.1,
-      "year_change": 0.5,
-      "trend": "stable"
-    }
-  ],
-  "last_updated": "2024-01-15",
-  "total_points": 36,
-  "fetch_time_seconds": 0.234,
-  "cached": false
-}
+        'series_id': 'CPIAUCSL',
+        'date': '2024-12-01',
+        'value': 317.603,
+        'period': '2024-12',
+        'year': 2024,
+        'month': 12,
+        'scraped_at': '2025-01-17T...'  # Only in live scraper
+    },
+    # ... more data points
+]
 ```
+
+## Performance Comparison
+
+| Method | Speed | Data Freshness | Use Case |
+|--------|--------|----------------|----------|
+| **Cached** | ~1ms | Historical + some recent | Fast analysis, backtesting |
+| **Live** | 1-3s | Always fresh | Current market data, real-time |
 
 ## Testing
 
-Run the test script to verify all endpoints:
+Run the included test files:
 
 ```bash
-python app/test_api.py
+# Test cached data API
+python final_test.py
+
+# Test live scraping API  
+python app/live_bls_scraper.py
+
+# Run demo
+python simple_demo.py
 ```
 
-This will test all endpoints and demonstrate the API's functionality including caching performance.
-
-## Project Structure
+## Files Structure
 
 ```
 BLS Scraper API/
 ├── app/
-│   ├── main.py          # FastAPI application and endpoints
-│   ├── bls_client.py    # BLS API client
-│   ├── models.py        # Pydantic data models
-│   └── test_api.py      # Test script
-└── README.md
+│   ├── fast_bls_api.py      # Fast cached data API
+│   └── live_bls_scraper.py  # Live web scraping API
+├── cached_data/             # Pre-cached BLS data files
+├── requirements.txt         # Python dependencies
+├── final_test.py           # Performance test
+├── simple_demo.py          # Usage examples
+└── SIMPLE_API_USAGE.md     # Detailed usage guide
 ```
 
-## Dependencies
+## When to Use Which
 
-- **FastAPI**: Web framework for building APIs
-- **Uvicorn**: ASGI server for running the application
-- **httpx**: Async HTTP client for BLS API requests
-- **Pydantic**: Data validation and serialization
-- **python-dotenv**: Environment variable management
+### Use Cached Data API when:
+- ✅ You need fast response times (milliseconds)
+- ✅ You're doing historical analysis or backtesting
+- ✅ You're running many queries frequently
+- ✅ You don't need the absolute latest data
 
-## Configuration
+### Use Live Scraping API when:
+- ✅ You need the most current data available
+- ✅ You're building real-time applications
+- ✅ You don't mind waiting 1-3 seconds per query
+- ✅ You want to ensure no dependency on cached files
 
-Environment variables:
-- `BLS_API_KEY`: Your BLS API registration key (optional, increases rate limits)
+## Requirements
 
-## Rate Limits
+- Python 3.7+
+- requests
+- beautifulsoup4
+- lxml
 
-- **Without API key**: 25 requests per day
-- **With API key**: 500 requests per day
+## Notes
 
-## Error Handling
+- **No BLS API Key Required**: Both options work without BLS API registration
+- **No Rate Limits**: The cached version has no rate limits
+- **Multiple Formats**: Supports various date input formats
+- **Error Handling**: Graceful handling of missing data or network issues
+- **Clean Data**: Automatically filters and validates data points
 
-The API provides comprehensive error handling:
-- Invalid series names return 404 with available options
-- BLS API errors are caught and returned with helpful messages
-- Network errors are handled gracefully
-- Global exception handler for unexpected errors
+## Troubleshooting
 
-## Contributing
+### Live Scraper Returns No Data
+- BLS website structure may have changed
+- Check internet connection
+- Try the cached data API instead
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+### Cached Data is Old
+- Update the `cached_data/` folder with fresh data
+- Or use the live scraping API for current data
 
-## License
-
-This project is open source. Please ensure compliance with BLS API terms of service when using this wrapper.
+That's it! Simple as `load_data(ticker, date)` 🚀

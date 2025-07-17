@@ -144,6 +144,16 @@ ENV/
 env.bak/
 venv.bak/
 
+# Data exports and CSV files
+exported_data/
+*.csv
+cached_data/
+mirrors/
+
+# BLS API specific
+.idea/
+.ipynb_checkpoints/
+
 # Spyder project settings
 .spyderproject
 .spyproject
