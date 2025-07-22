@@ -1,29 +1,22 @@
-#!/usr/bin/env python3
-"""
-Final Test: Simple BLS API that loads data in under 1 minute
-Just call load_data(ticker, date) to get CPI/PPI data quickly
-"""
-
 import time
 from app.fast_bls_api import load_data, FastBLSAPI
 
 def test_performance():
-    """Test that the API loads data in under 1 minute"""
-    print("🚀 Testing Fast BLS API Performance\n")
-    
+    print("Test BLS API Performance")
+
     start_time = time.time()
     
     # Test 1: Simple CPI load
-    print("1️⃣ Loading CPI data...")
+    print("Loading CPI data...")
     cpi_data = load_data('cpi', '2022-2024')
-    print(f"   ✅ Got {len(cpi_data)} CPI data points")
+    print(f"   Got {len(cpi_data)} CPI data points")
     if cpi_data:
         print(f"   📊 Latest CPI: {cpi_data[0]['value']} ({cpi_data[0]['date']})")
     
     # Test 2: Simple PPI load  
     print("\n2️⃣ Loading PPI data...")
     ppi_data = load_data('ppi', '2023-2024')
-    print(f"   ✅ Got {len(ppi_data)} PPI data points")
+    print(f"   Got {len(ppi_data)} PPI data points")
     if ppi_data:
         print(f"   📊 Latest PPI: {ppi_data[0]['value']} ({ppi_data[0]['date']})")
     

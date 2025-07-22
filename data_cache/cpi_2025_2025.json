@@ -1,0 +1,22 @@
+[
+  {
+    "series_id": "CPIAUCSL",
+    "date": "2025-12-01",
+    "value": 317.671,
+    "period": "2025-12",
+    "year": 2025,
+    "month": 12,
+    "category": "CPI All Items",
+    "source": "bls_historical"
+  },
+  {
+    "series_id": "CPIAUCSL",
+    "date": "2025-12-01",
+    "value": 311.172,
+    "period": "2025-12",
+    "year": 2025,
+    "month": 12,
+    "category": "CPI All Items",
+    "source": "bls_historical"
+  }
+]

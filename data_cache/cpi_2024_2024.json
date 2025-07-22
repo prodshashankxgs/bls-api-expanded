@@ -1,0 +1,22 @@
+[
+  {
+    "series_id": "CPIAUCSL",
+    "date": "2024-12-01",
+    "value": 308.417,
+    "period": "2024-12",
+    "year": 2024,
+    "month": 12,
+    "category": "CPI All Items",
+    "source": "bls_historical"
+  },
+  {
+    "series_id": "CPIAUCSL",
+    "date": "2024-12-01",
+    "value": 302.201,
+    "period": "2024-12",
+    "year": 2024,
+    "month": 12,
+    "category": "CPI All Items",
+    "source": "bls_historical"
+  }
+]
