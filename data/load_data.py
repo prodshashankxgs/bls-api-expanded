@@ -27,7 +27,7 @@ class DataLoader:
             "CPIQSMFN Index": "ppi"
         }
     
-    def load_data(self, tickers: List[str], start_date: str) -> pd.DataFrame:
+    def load_data(self, tickers: List[str], start_date: str) -> pl.DataFrame:
         """
         Load data for multiple tickers and return as a consolidated DataFrame.
         
@@ -36,7 +36,7 @@ class DataLoader:
             start_date: Start date in format "YYYY-MM-DD" or just "YYYY"
             
         Returns:
-            pandas DataFrame with columns: ticker, date, value, series_id, category
+            Polars DataFrame with columns: ticker, date, value, series_id, category
         """
         all_data = []
         
@@ -69,17 +69,25 @@ class DataLoader:
                     'source': point['source']
                 })
         
-        # Convert to DataFrame
-        df = pd.DataFrame(all_data)
-        
-        if not df.empty:
-            # Convert date column to datetime
-            df['date'] = pd.to_datetime(df['date'])
+        # Convert to Polars DataFrame
+        if all_data:
+            df = pl.DataFrame(all_data)
             
-            # Sort by ticker and date
-            df = df.sort_values(['ticker', 'date'])
+            # Convert date column to datetime and sort
+            df = df.with_columns([
+                pl.col('date').str.to_datetime()
+            ]).sort(['ticker', 'date'])
             
-            # Reset index
-            df = df.reset_index(drop=True)
-        
-        return df
+            return df
+        else:
+            # Return empty DataFrame with correct schema
+            return pl.DataFrame({
+                'ticker': [],
+                'date': [],
+                'value': [],
+                'series_id': [],
+                'category': [],
+                'year': [],
+                'month': [],
+                'source': []
+            })
