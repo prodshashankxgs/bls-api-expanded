@@ -254,7 +254,7 @@ def _cached_excel_read(file_path: str, file_mtime: float) -> Optional[pl.DataFra
     try:
         with _file_lock:
             return _read_excel_file_optimized(Path(file_path))
-    except Exception as e:
+            except Exception as e:
         logger.error(f"Error reading cached Excel file: {e}")
         return None
 
@@ -326,7 +326,7 @@ def read_excel_with_named_columns(file_path: Path) -> pl.DataFrame:
         # Fallback to direct reading
         return _read_excel_file_optimized(file_path)
                 
-    except Exception as e:
+        except Exception as e:
         logger.error(f"Error reading Excel file: {e}")
         return pl.DataFrame()
 
@@ -443,10 +443,6 @@ def fetch_bls_data_api(series_id: str, start_year: str = "2023", end_year: str =
             ]
             
             return pl.DataFrame(df_data)
-        else:
-            error_msg = result.get('message', ['Unknown error'])[0]
-            logger.warning(f"BLS API request failed: {error_msg}")
-            return pl.DataFrame()
             
     except Exception as e:
         logger.error(f"Error fetching BLS data for series {series_id}: {e}")
@@ -800,7 +796,7 @@ class DataLoader:
         
         if all_data:
             return pl.concat(all_data)
-        return pl.DataFrame()
+            return pl.DataFrame()
         
     def load_data_with_excel_fallback(self, ticker: str, date: str = None, prefer_excel: bool = True) -> pl.DataFrame:
         """Load data with Excel fallback (optimized)."""
@@ -878,7 +874,7 @@ class DataLoader:
                 # Default to CSV
                 df.write_csv(filename + '.csv')
             logger.info(f"Data saved to {filename}")
-        except Exception as e:
+            except Exception as e:
             logger.error(f"Error saving data: {e}")
     
     def get_summary(self, df: pl.DataFrame) -> Dict[str, Any]:
