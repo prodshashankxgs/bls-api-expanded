@@ -325,7 +325,7 @@ def read_excel_with_named_columns(file_path: Path) -> pl.DataFrame:
         
         # Fallback to direct reading
         return _read_excel_file_optimized(file_path)
-        
+                
     except Exception as e:
         logger.error(f"Error reading Excel file: {e}")
         return pl.DataFrame()
@@ -801,7 +801,7 @@ class DataLoader:
         if all_data:
             return pl.concat(all_data)
         return pl.DataFrame()
-    
+        
     def load_data_with_excel_fallback(self, ticker: str, date: str = None, prefer_excel: bool = True) -> pl.DataFrame:
         """Load data with Excel fallback (optimized)."""
         return load_data(ticker, date)
