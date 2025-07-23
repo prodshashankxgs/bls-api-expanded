@@ -10,14 +10,22 @@ from pathlib import Path
 
 def check_dependencies():
     """check if all required packages are installed"""
-    required = ['fastapi', 'uvicorn', 'requests', 'beautifulsoup4', 'lxml', 'python-dotenv']
+    # map package names to their import names
+    packages = {
+        'fastapi': 'fastapi',
+        'uvicorn': 'uvicorn', 
+        'requests': 'requests',
+        'beautifulsoup4': 'bs4',
+        'lxml': 'lxml',
+        'python-dotenv': 'dotenv'
+    }
     missing = []
     
-    for package in required:
+    for package_name, import_name in packages.items():
         try:
-            __import__(package.replace('-', '_'))
+            __import__(import_name)
         except ImportError:
-            missing.append(package)
+            missing.append(package_name)
     
     if missing:
         print(f"missing packages: {', '.join(missing)}")

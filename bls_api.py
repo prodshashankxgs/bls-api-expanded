@@ -22,8 +22,9 @@ import requests
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import pandas as pd
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -59,25 +60,26 @@ class BLSScraper:
         self.cache_dir = CACHE_DIR
         self.cache_hours = 1
         
-        # economic indicator mappings
+        # economic indicator mappings with categories - BLS timeseries IDs
         self.series_map = {
-            'cpi': 'CPIAUCSL',
-            'cpi_all': 'CPIAUCSL',
-            'cpi_core': 'CPILFESL', 
-            'cpi_food': 'CPIUFDSL',
-            'cpi_energy': 'CPIENGSL',
-            'cpi_housing': 'CPIHOSSL',
-            'ppi': 'PPIFIS',
-            'ppi_all': 'PPIFIS',
-            'unemployment': 'UNRATE',
-            'gdp': 'GDP'
+            'cpi': {'series_id': 'CUUR0000SA0', 'category': 'Consumer Price Index', 'timeseries': True},
+            'cpi_all': {'series_id': 'CUUR0000SA0', 'category': 'Consumer Price Index', 'timeseries': True},
+            'cpi_core': {'series_id': 'CUUR0000SA0L1E', 'category': 'Core CPI (Less Food and Energy)', 'timeseries': True}, 
+            'cpi_food': {'series_id': 'CUUR0000SAF1', 'category': 'Food Consumer Price Index', 'timeseries': True},
+            'cpi_energy': {'series_id': 'CUUR0000SA0E', 'category': 'Energy Consumer Price Index', 'timeseries': True},
+            'cpi_housing': {'series_id': 'CUUR0000SAH1', 'category': 'Housing Consumer Price Index', 'timeseries': True},
+            'ppi': {'series_id': 'WPUFD49207', 'category': 'Producer Price Index', 'timeseries': True},
+            'ppi_all': {'series_id': 'WPUFD4', 'category': 'Producer Price Index (All Commodities)', 'timeseries': True},
+            'unemployment': {'series_id': 'LNS14000000', 'category': 'Unemployment Rate', 'timeseries': True},
+            'gdp': {'series_id': 'GDP', 'category': 'Gross Domestic Product', 'timeseries': False}  # GDP not available in timeseries
         }
         
         # data sources
         self.data_sources = {
             'bls_api': 'https://api.bls.gov/publicAPI/v2/timeseries/data/',
             'bls_cpi': 'https://www.bls.gov/news.release/cpi.nr0.htm',
-            'bls_ppi': 'https://www.bls.gov/news.release/ppi.nr0.htm'
+            'bls_ppi': 'https://www.bls.gov/news.release/ppi.nr0.htm',
+            'bls_timeseries': 'https://data.bls.gov/timeseries/'
         }
         
         self.session = self._create_session()
@@ -151,10 +153,19 @@ class BLSScraper:
             logger.error(f"cache write error: {e}")
     
     def _parse_date_range(self, date_str: str) -> tuple:
-        """parse date range string"""
+        """parse date range string - defaults to 2015-01 to 2025-06"""
         if not date_str:
-            current_year = datetime.now().year
-            return current_year - 2, current_year
+            # Default to 2015 to min(current year, 2025) based on datetime
+            current_date = datetime.now()
+            target_end = datetime(2025, 6, 1)  # 2025-06
+            
+            # Use the earlier of current date or 2025-06
+            if current_date > target_end:
+                end_year = target_end.year
+            else:
+                end_year = current_date.year
+            
+            return 2015, end_year
         
         date_str = date_str.lower().strip()
         current_year = datetime.now().year
@@ -172,7 +183,8 @@ class BLSScraper:
             year = int(date_str)
             return year, year
         else:
-            return current_year - 2, current_year
+            # Default range: 2015 to 2025
+            return 2015, 2025
     
     def _scrape_bls_data(self, ticker: str, start_year: int, end_year: int) -> List[Dict]:
         """scrape data from bls sources"""
@@ -180,10 +192,11 @@ class BLSScraper:
         
         try:
             # try bls api first
-            series_id = self.series_map.get(ticker, ticker.upper())
-            api_data = self._try_bls_api(series_id, start_year, end_year)
-            if api_data:
-                data.extend(api_data)
+            series_info = self.series_map.get(ticker)
+            if series_info:
+                api_data = self._try_bls_api(ticker, series_info, start_year, end_year)
+                if api_data:
+                    data.extend(api_data)
             
             # fallback to web scraping if needed
             if not data:
@@ -196,9 +209,12 @@ class BLSScraper:
         
         return data
     
-    def _try_bls_api(self, series_id: str, start_year: int, end_year: int) -> List[Dict]:
+    def _try_bls_api(self, ticker: str, series_info: dict, start_year: int, end_year: int) -> List[Dict]:
         """try bls official api"""
         try:
+            series_id = series_info['series_id']
+            category = series_info['category']
+            
             payload = {
                 'seriesid': [series_id],
                 'startyear': str(start_year),
@@ -218,10 +234,12 @@ class BLSScraper:
                     
                     return [
                         {
-                            'date': f"{item['year']}-{item['period'][1:].zfill(2)}-01",
-                            'value': float(item['value']),
+                            'ticker': ticker,
                             'year': int(item['year']),
-                            'period': item['period'],
+                            'month': int(item['period'][1:]) if item['period'].startswith('M') else int(item['period'][1:]),
+                            'value': float(item['value']),
+                            'series_id': series_id,
+                            'category': category,
                             'source': 'bls api'
                         }
                         for item in series_data
@@ -233,11 +251,17 @@ class BLSScraper:
         return []
     
     def _try_web_scraping(self, ticker: str) -> List[Dict]:
-        """fallback web scraping"""
+        """fallback web scraping using BLS timeseries"""
         try:
-            if ticker == 'cpi':
-                return self._scrape_cpi_web()
-            elif ticker == 'ppi':
+            series_info = self.series_map.get(ticker)
+            if series_info and series_info.get('timeseries', False):
+                # Use the general timeseries scraper for all supported indicators
+                return self.scrape_bls_timeseries(
+                    series_info['series_id'], 
+                    ticker, 
+                    series_info['category']
+                )
+            elif ticker == 'ppi':  
                 return self._scrape_ppi_web()
         except Exception as e:
             logger.debug(f"web scraping error for {ticker}: {e}")
@@ -285,13 +309,183 @@ class BLSScraper:
             
         return []
     
+    def _scrape_cpi_timeseries(self) -> List[Dict]:
+        """scrape cpi data from bls timeseries table"""
+        try:
+            url = "https://data.bls.gov/timeseries/CUUR0000SA0?years_option=all_years"
+            response = self.session.get(url, timeout=30)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            data = []
+            
+            # Find the main data table - BLS uses specific table structure
+            table = soup.find('table', {'class': 'regular-data'})
+            if not table:
+                # Try alternative table selectors
+                table = soup.find('table', {'id': 'table0'}) or soup.find('table')
+            
+            if table:
+                rows = table.find_all('tr')
+                
+                # Find header row to identify month columns
+                header_row = None
+                for i, row in enumerate(rows):
+                    if row.find('th'):
+                        header_row = row
+                        break
+                
+                if header_row:
+                    headers = [th.get_text().strip() for th in header_row.find_all('th')]
+                    
+                    # Process data rows
+                    for row in rows[1:]:  # Skip header
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) >= 2:
+                            try:
+                                year_text = cells[0].get_text().strip()
+                                
+                                # Validate year
+                                if year_text.isdigit() and len(year_text) == 4:
+                                    year = int(year_text)
+                                    
+                                    # Process monthly data
+                                    for i, cell in enumerate(cells[1:], 1):
+                                        if i < len(headers):
+                                            value_text = cell.get_text().strip()
+                                            
+                                            # Skip if no value or placeholder
+                                            if value_text in ['', '-', '.', 'M']:
+                                                continue
+                                            
+                                            try:
+                                                value = float(value_text)
+                                                month_name = headers[i].lower()
+                                                
+                                                # Map month names to numbers
+                                                month_map = {
+                                                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+                                                    'may': 5, 'jun': 6, 'jul': 7, 'aug': 8,
+                                                    'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                                                }
+                                                
+                                                month = month_map.get(month_name[:3], None)
+                                                if month:
+                                                    data.append({
+                                                        'ticker': 'cpi',
+                                                        'year': year,
+                                                        'month': month,
+                                                        'value': value,
+                                                        'series_id': 'CUUR0000SA0',
+                                                        'category': 'Consumer Price Index',
+                                                        'source': 'bls timeseries'
+                                                    })
+                                            except ValueError:
+                                                continue
+                            except ValueError:
+                                continue
+            
+            # Sort by year and month (most recent first)
+            data.sort(key=lambda x: (x['year'], x['month']), reverse=True)
+            
+            logger.info(f"Scraped {len(data)} CPI data points from BLS timeseries")
+            return data
+            
+        except Exception as e:
+            logger.error(f"CPI timeseries scraping error: {e}")
+            return []
+    
+    def scrape_bls_timeseries(self, series_id: str, ticker: str = None, category: str = None) -> List[Dict]:
+        """scrape data from any BLS timeseries URL"""
+        try:
+            url = f"{self.data_sources['bls_timeseries']}{series_id}?years_option=all_years"
+            response = self.session.get(url, timeout=30)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            data = []
+            
+            # Find the main data table - BLS uses specific table structure
+            table = soup.find('table', {'class': 'regular-data'})
+            if not table:
+                # Try alternative table selectors
+                table = soup.find('table', {'id': 'table0'}) or soup.find('table')
+            
+            if table:
+                rows = table.find_all('tr')
+                
+                # Find header row to identify month columns
+                header_row = None
+                for i, row in enumerate(rows):
+                    if row.find('th'):
+                        header_row = row
+                        break
+                
+                if header_row:
+                    headers = [th.get_text().strip() for th in header_row.find_all('th')]
+                    
+                    # Process data rows
+                    for row in rows[1:]:  # Skip header
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) >= 2:
+                            try:
+                                year_text = cells[0].get_text().strip()
+                                
+                                # Validate year
+                                if year_text.isdigit() and len(year_text) == 4:
+                                    year = int(year_text)
+                                    
+                                    # Process monthly data
+                                    for i, cell in enumerate(cells[1:], 1):
+                                        if i < len(headers):
+                                            value_text = cell.get_text().strip()
+                                            
+                                            # Skip if no value or placeholder
+                                            if value_text in ['', '-', '.', 'M']:
+                                                continue
+                                            
+                                            try:
+                                                value = float(value_text)
+                                                month_name = headers[i].lower()
+                                                
+                                                # Map month names to numbers
+                                                month_map = {
+                                                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+                                                    'may': 5, 'jun': 6, 'jul': 7, 'aug': 8,
+                                                    'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                                                }
+                                                
+                                                month = month_map.get(month_name[:3], None)
+                                                if month:
+                                                    data.append({
+                                                        'ticker': ticker or series_id.lower(),
+                                                        'year': year,
+                                                        'month': month,
+                                                        'value': value,
+                                                        'series_id': series_id,
+                                                        'category': category or f'Series {series_id}',
+                                                        'source': 'bls timeseries'
+                                                    })
+                                            except ValueError:
+                                                continue
+                            except ValueError:
+                                continue
+            
+            # Sort by year and month (most recent first)
+            data.sort(key=lambda x: (x['year'], x['month']), reverse=True)
+            
+            logger.info(f"Scraped {len(data)} data points from BLS timeseries {series_id}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"BLS timeseries scraping error for {series_id}: {e}")
+            return []
+    
     def _scrape_ppi_web(self) -> List[Dict]:
         """scrape ppi from bls website"""
         # similar implementation to cpi scraping
         return []
     
     def load_data(self, ticker: str, date_range: str = None) -> List[Dict]:
-        """main data loading function"""
+        """main data loading function - returns data as list of dictionaries"""
         ticker = ticker.lower().strip()
         
         # check cache first
@@ -305,13 +499,38 @@ class BLSScraper:
         # scrape fresh data
         data = self._scrape_bls_data(ticker, start_year, end_year)
         
-        # sort by date (most recent first)
-        data.sort(key=lambda x: x.get('date', ''), reverse=True)
+        # sort by year and month (most recent first)
+        data.sort(key=lambda x: (x.get('year', 0), x.get('month', 0)), reverse=True)
         
         # cache the result
         self._save_to_cache(ticker, date_range, data)
         
         return data
+    
+    def load_dataframe(self, ticker: str, date_range: str = None) -> pd.DataFrame:
+        """load data and return as pandas DataFrame with specified columns"""
+        data = self.load_data(ticker, date_range)
+        
+        if not data:
+            # Return empty DataFrame with correct columns
+            return pd.DataFrame(columns=['ticker', 'year', 'month', 'value', 'series_id', 'category'])
+        
+        # Create DataFrame from the data
+        df = pd.DataFrame(data)
+        
+        # Ensure we have all required columns
+        required_columns = ['ticker', 'year', 'month', 'value', 'series_id', 'category']
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = None
+        
+        # Select and reorder columns
+        df = df[required_columns]
+        
+        # Sort by year and month (most recent first)
+        df = df.sort_values(['year', 'month'], ascending=[False, False]).reset_index(drop=True)
+        
+        return df
     
     def get_available_indicators(self) -> Dict[str, str]:
         """Get available economic indicators"""
@@ -469,7 +688,7 @@ class DataResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
-    status: str = "error"
+    status: str = Field(default="error")
     timestamp: str
 
 @asynccontextmanager
@@ -613,12 +832,12 @@ async def get_indicators():
         logger.error(f"Failed to get indicators: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve indicators")
 
-@app.get("/data/{ticker}", response_model=DataResponse)
+@app.get("/data/{ticker}")
 async def get_economic_data(
-    ticker: str = Field(..., description="Economic indicator (e.g., 'cpi', 'unemployment')"),
-    date: Optional[str] = Query(None, description="Date range (e.g., '2022-2024', '2023')"),
-    format: str = Query("json", regex="^(json|csv)$", description="Output format"),
-    limit: Optional[int] = Query(None, le=MAX_RESULTS, description=f"Max results (up to {MAX_RESULTS})")
+    ticker: str,
+    date: Optional[str] = None,
+    format: str = "json",
+    limit: Optional[int] = None
 ):
     """Get economic data for specified indicator"""
     
@@ -626,6 +845,10 @@ async def get_economic_data(
         raise HTTPException(status_code=400, detail="Ticker parameter is required")
     
     ticker = ticker.strip().lower()
+    
+    # Validate format parameter
+    if format not in ["json", "csv"]:
+        raise HTTPException(status_code=400, detail="Format must be 'json' or 'csv'")
     
     try:
         data = optimized_scraper.load_data(ticker, date)
@@ -659,14 +882,14 @@ async def get_economic_data(
                 headers={"Content-Disposition": f"attachment; filename={ticker}_data.csv"}
             )
         
-        return DataResponse(
-            status="success",
-            timestamp=datetime.now().isoformat(),
-            ticker=ticker,
-            date_range=date or "default",
-            count=len(data),
-            data=data
-        )
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "ticker": ticker,
+            "date_range": date or "default",
+            "count": len(data),
+            "data": data
+        }
         
     except HTTPException:
         raise
