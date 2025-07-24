@@ -1,6 +1,9 @@
-# BLS Economic Data Scraper API - Git Ignore
+# bls economic data scraper api - production .gitignore
+# comprehensive gitignore for shippable data scraping project
 
-# Python
+# ================================
+# python runtime and bytecode
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,48 +25,279 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.manifest
+*.spec
 
-# Virtual environments
+# ================================
+# virtual environments
+# ================================
 .env
-.venv
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.python-version
+.pytest_cache/
 
-# IDE
+# ================================
+# ides and editors
+# ================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.sublime-project
+.sublime-workspace
+*.code-workspace
 
-# Generated data files
+# jetbrains ides
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vim
+*.vim
+.vimrc
+
+# emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ================================
+# data files and caches
+# ================================
+
+# downloaded excel files (user can re-download)
+data_sheet/*.xlsx
+data_sheet/*.xls
+!data_sheet/.gitkeep
+
+# performance and api caches (regenerated automatically)
+data_cache/
+!data_cache/.gitkeep
+
+# processed data exports
 *.csv
 *.json
+*.parquet
+exports/
+output/
+
+# serialized objects
 *.pkl
+*.pickle
+
+# ================================
+# logging and monitoring
+# ================================
 *.log
+*.log.*
+logs/
+log/
+.log
 
-# Application cache
-data_cache/
+# performance test outputs
+performance_results/
+benchmark_*.json
+timing_*.csv
 
-# OS files
+# ================================
+# os and system files
+# ================================
+
+# macos
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
+.Apdisk
 
-# Temporary files
+# windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# linux
+*~
+.directory
+.Trash-*
+
+# ================================
+# temporary and backup files
+# ================================
 *.tmp
 *.temp
+*.bak
+*.backup
+*.old
 temp/
 tmp/
+.temporary
+.cache
 
-# Test outputs
+# backup files
+*~
+*.orig
+*.rej
+
+# ================================
+# security and credentials
+# ================================
+.env
+.env.local
+.env.*.local
+secrets.json
+config.ini
+credentials.json
+api_keys.txt
+.secrets/
+
+# ssl certificates
+*.pem
+*.key
+*.cert
+*.crt
+
+# ================================
+# testing and development
+# ================================
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+htmlcov/
+.testmondata
+coverage.xml
+*.cover
+.hypothesis/
+
+# test outputs and examples
 *_test_*
 *_example_*
+test_outputs/
+examples_generated/
+
+# jupyter notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb
+
+# ================================
+# deployment and containerization
+# ================================
+.docker/
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore
+
+# kubernetes
+*.yaml.local
+*.yml.local
+
+# terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ================================
+# package managers and dependencies
+# ================================
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+.installed.cfg
+
+# conda
+.conda/
+environment.yml.backup
+
+# poetry
+poetry.lock
+
+# pipenv
+Pipfile.lock
+
+# ================================
+# documentation generation
+# ================================
+docs/_build/
+docs/build/
+site/
+.mkdocs.yml
+
+# sphinx
+docs/_build
+docs/_static
+docs/_templates
+
+# ================================
+# cloud and ci/cd
+# ================================
+.github/workflows/*.local.yml
+.gitlab-ci.local.yml
+.travis.yml.local
+
+# heroku
+.env.heroku
+Procfile.local
+
+# aws
+.aws/
+aws-config.json
+
+# ================================
+# database files
+# ================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ================================
+# project specific exclusions
+# ================================
+
+# performance monitoring temporary files
+auto_scraper_stats.json
+performance_history.json
+
+# temporary download staging
+downloads/
+staging/
+
+# user-specific configuration
+config_local.py
+settings_local.py
+
+# development notes and todos
+TODO.md
+NOTES.md
+dev_notes/
+
+# large data files (keep samples, exclude full datasets)
+data/large/
+bulk_data/
+
+# ================================
+# keep essential directories
+# ================================
+# keep important empty directories with .gitkeep files
+!.gitkeep
+!*/
 
