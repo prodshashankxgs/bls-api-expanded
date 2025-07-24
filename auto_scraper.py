@@ -59,7 +59,18 @@ class BLSAutoScraper:
             'total_checks': 0,
             'successful_downloads': 0,
             'data_points_processed': 0,
-            'last_update': None
+            'last_update': None,
+            # Timing statistics
+            'total_scraping_time': 0.0,
+            'total_processing_time': 0.0,
+            'average_scraping_time': 0.0,
+            'average_processing_time': 0.0,
+            'fastest_scraping_time': float('inf'),
+            'slowest_scraping_time': 0.0,
+            'fastest_processing_time': float('inf'),
+            'slowest_processing_time': 0.0,
+            'last_scraping_time': 0.0,
+            'last_processing_time': 0.0
         }
         
         # Setup graceful shutdown
@@ -105,6 +116,8 @@ class BLSAutoScraper:
         """
         try:
             logger.info("🔍 Checking BLS website for new files...")
+            scraping_start_time = time.time()
+            
             self.stats['total_checks'] += 1
             self.last_check = datetime.now()
             
@@ -114,6 +127,12 @@ class BLSAutoScraper:
             # Try to download latest file
             latest_file = self.downloader.download_latest_cpi_file()
             
+            scraping_end_time = time.time()
+            scraping_duration = scraping_end_time - scraping_start_time
+            
+            # Update scraping timing stats
+            self._update_scraping_stats(scraping_duration)
+            
             if latest_file:
                 # Update current files
                 self.current_files = self.get_current_files()
@@ -122,24 +141,62 @@ class BLSAutoScraper:
                 new_files = self.current_files - files_before
                 
                 if new_files:
-                    logger.info(f"New file downloaded: {', '.join(new_files)}")
+                    logger.info(f"New file downloaded: {', '.join(new_files)} (scraping took {scraping_duration:.2f}s)")
                     self.stats['successful_downloads'] += 1
                     self.last_download = datetime.now()
                     
-                    # Process the new file
+                    # Process the new file with timing
+                    processing_start_time = time.time()
                     self.process_new_file(latest_file)
+                    processing_end_time = time.time()
+                    processing_duration = processing_end_time - processing_start_time
+                    
+                    # Update processing timing stats
+                    self._update_processing_stats(processing_duration)
+                    
+                    logger.info(f"⏱️  Performance: Scraping {scraping_duration:.2f}s | Processing {processing_duration:.2f}s | Total {scraping_duration + processing_duration:.2f}s")
                     return True
                 else:
-                    logger.info("No new files - data is up to date")
+                    logger.info(f"No new files - data is up to date (checked in {scraping_duration:.2f}s)")
                     return False
             else:
-                logger.warning("Failed to download files from BLS")
+                logger.warning(f"Failed to download files from BLS (attempt took {scraping_duration:.2f}s)")
                 return False
                 
         except Exception as e:
             logger.error(f"Error checking for updates: {e}")
             return False
     
+    def _update_scraping_stats(self, duration: float):
+        """Update scraping timing statistics"""
+        self.stats['last_scraping_time'] = duration
+        self.stats['total_scraping_time'] += duration
+        
+        # Update fastest/slowest
+        if duration < self.stats['fastest_scraping_time']:
+            self.stats['fastest_scraping_time'] = duration
+        if duration > self.stats['slowest_scraping_time']:
+            self.stats['slowest_scraping_time'] = duration
+        
+        # Update average
+        if self.stats['total_checks'] > 0:
+            self.stats['average_scraping_time'] = self.stats['total_scraping_time'] / self.stats['total_checks']
+    
+    def _update_processing_stats(self, duration: float):
+        """Update processing timing statistics"""
+        self.stats['last_processing_time'] = duration
+        self.stats['total_processing_time'] += duration
+        
+        # Update fastest/slowest
+        if duration < self.stats['fastest_processing_time']:
+            self.stats['fastest_processing_time'] = duration
+        if duration > self.stats['slowest_processing_time']:
+            self.stats['slowest_processing_time'] = duration
+        
+        # Update average
+        if self.stats['successful_downloads'] > 0:
+            self.stats['average_processing_time'] = self.stats['total_processing_time'] / self.stats['successful_downloads']
+
     def process_new_file(self, file_path: Path):
         """Process a newly downloaded Excel file"""
         try:
@@ -240,7 +297,7 @@ class BLSAutoScraper:
         """Print current status dashboard"""
         try:
             print("AUTO-SCRAPER STATUS DASHBOARD")
-            print("=" * 40)
+            print("=" * 50)
             print(f"Running: {'Yes' if self.running else 'No'}")
             print(f"Last Check: {self.last_check.strftime('%H:%M:%S') if self.last_check else 'Never'}")
             print(f"Last Download: {self.last_download.strftime('%H:%M:%S') if self.last_download else 'Never'}")
@@ -251,6 +308,40 @@ class BLSAutoScraper:
             
             if self.stats['last_update']:
                 print(f"Last Update: {self.stats['last_update'].strftime('%H:%M:%S')}")
+            
+            # Performance Metrics
+            print()
+            print("⏱️  PERFORMANCE METRICS")
+            print("-" * 30)
+            
+            # Scraping metrics
+            if self.stats['total_checks'] > 0:
+                print(f"Scraping Performance:")
+                print(f"  Last: {self.stats['last_scraping_time']:.2f}s")
+                print(f"  Average: {self.stats['average_scraping_time']:.2f}s")
+                if self.stats['fastest_scraping_time'] != float('inf'):
+                    print(f"  Fastest: {self.stats['fastest_scraping_time']:.2f}s")
+                print(f"  Slowest: {self.stats['slowest_scraping_time']:.2f}s")
+                print(f"  Total Time: {self.stats['total_scraping_time']:.2f}s")
+            
+            # Processing metrics
+            if self.stats['successful_downloads'] > 0:
+                print(f"Processing Performance:")
+                print(f"  Last: {self.stats['last_processing_time']:.2f}s")
+                print(f"  Average: {self.stats['average_processing_time']:.2f}s")
+                if self.stats['fastest_processing_time'] != float('inf'):
+                    print(f"  Fastest: {self.stats['fastest_processing_time']:.2f}s")
+                print(f"  Slowest: {self.stats['slowest_processing_time']:.2f}s")
+                print(f"  Total Time: {self.stats['total_processing_time']:.2f}s")
+            
+            # Overall efficiency
+            total_time = self.stats['total_scraping_time'] + self.stats['total_processing_time']
+            if total_time > 0:
+                scraping_pct = (self.stats['total_scraping_time'] / total_time) * 100
+                processing_pct = (self.stats['total_processing_time'] / total_time) * 100
+                print(f"Time Distribution:")
+                print(f"  Scraping: {scraping_pct:.1f}% ({self.stats['total_scraping_time']:.2f}s)")
+                print(f"  Processing: {processing_pct:.1f}% ({self.stats['total_processing_time']:.2f}s)")
             
             print()
             print("Available Tickers for load_data():")
@@ -265,7 +356,7 @@ class BLSAutoScraper:
             print("Usage in other tab:")
             print("   from data_loader import load_data")
             print("   df = load_data('CPSCJEWE Index', 'latest')")
-            print("=" * 40)
+            print("=" * 50)
             print()
             
         except Exception as e:

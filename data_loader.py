@@ -254,7 +254,7 @@ def _cached_excel_read(file_path: str, file_mtime: float) -> Optional[pl.DataFra
     try:
         with _file_lock:
             return _read_excel_file_optimized(Path(file_path))
-            except Exception as e:
+    except Exception as e:
         logger.error(f"Error reading cached Excel file: {e}")
         return None
 
@@ -326,7 +326,7 @@ def read_excel_with_named_columns(file_path: Path) -> pl.DataFrame:
         # Fallback to direct reading
         return _read_excel_file_optimized(file_path)
                 
-        except Exception as e:
+    except Exception as e:
         logger.error(f"Error reading Excel file: {e}")
         return pl.DataFrame()
 
@@ -874,7 +874,7 @@ class DataLoader:
                 # Default to CSV
                 df.write_csv(filename + '.csv')
             logger.info(f"Data saved to {filename}")
-            except Exception as e:
+        except Exception as e:
             logger.error(f"Error saving data: {e}")
     
     def get_summary(self, df: pl.DataFrame) -> Dict[str, Any]:
