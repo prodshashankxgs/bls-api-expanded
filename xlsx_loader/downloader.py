@@ -146,7 +146,7 @@ class BLSExcelDownloader:
                     # Fallback to general CPI-U pattern
                     is_cpi_general = cpi_pattern.search(text) or cpi_pattern.search(href)
                     
-                    if is_cpi_u_file or is_cpi_general:
+                    if is_cpi_u_file or is_cpi_u_text or is_cpi_general:
                         
                         # Build full URL
                         if href.startswith('http'):
@@ -160,8 +160,13 @@ class BLSExcelDownloader:
                         # Try to extract date from text or filename
                         date_info = self._extract_date_from_text(text + ' ' + filename)
                         
-                        # Prioritize cpi-u-YYYYMM.xlsx files
-                        priority = 1 if is_cpi_u_file else 2
+                        # Prioritize cpi-u-YYYYMM.xlsx files, then "CPI-U" text links
+                        if is_cpi_u_file:
+                            priority = 1
+                        elif is_cpi_u_text:
+                            priority = 2
+                        else:
+                            priority = 3
                         
                         excel_links.append({
                             'url': full_url,
