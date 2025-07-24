@@ -1,368 +1,184 @@
-# bls economic data scraper api
+# BLS Economic Data Scraper
 
-**comprehensive solution for accessing us bureau of labor statistics data with performance timing**
+A cross-platform, easy-to-use scraper for US Bureau of Labor Statistics economic data. Downloads Excel files automatically and provides simple functions to access CPI and inflation data.
 
-optimized data engine with real-time performance monitoring, automatic excel file processing, and smart fallback systems. includes comprehensive timing measurements for scraping and processing operations.
+## Quick Start
 
-## quick start
-
-### installation
+### 1. Install Dependencies
 ```bash
-cd "BLS Scraper API"
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-### immediate usage
+### 2. Download Data
+```bash
+# Download once and exit
+python scraper.py
+
+# Download continuously (checks every 30 minutes)
+python scraper.py continuous
+
+# Download and show sample data
+python scraper.py data
+```
+
+### 3. Use Data in Python
 ```python
-from data_loader import load_data
-from bls_snapshots import cpi, inflation, housing
+from data import get_cpi, get_food_data, get_energy_data, print_summary
 
-# get data with automatic timing
-df = load_data("All items", "latest")
-snapshot = cpi("2025-06-01")
+# Get CPI data
+cpi_data = get_cpi()
+print(cpi_data.head())
+
+# Get specific categories
+food_prices = get_food_data()
+energy_prices = get_energy_data()
+housing_prices = get_housing_data()
+
+# Quick summary
+print_summary()
 ```
 
-## performance monitoring system
+## Features
 
-### automatic timing in auto_scraper
-the auto_scraper now includes comprehensive performance monitoring:
+✅ **Cross-platform** - Works on Windows, Mac, and Linux  
+✅ **Automatic downloads** - Gets latest Excel files from BLS website  
+✅ **Easy to use** - Simple functions that return pandas DataFrames  
+✅ **Human-readable** - Clear code that's easy to understand and modify  
+✅ **Configurable** - Customize paths with environment variables  
 
+## Project Structure
+
+```
+BLS Scraper API/
+├── config.py          # Cross-platform configuration
+├── scraper.py          # Main scraper (downloads Excel files)
+├── data.py             # Data access functions
+├── requirements.txt    # Python dependencies
+├── xlsx_loader/        # Excel processing utilities
+├── data_sheet/         # Downloaded Excel files (auto-created)
+├── data_cache/         # Cached data (auto-created)
+└── logs/              # Log files (auto-created)
+```
+
+## Configuration
+
+The scraper uses `config.py` to handle paths and settings. It automatically detects your operating system and creates the right file paths.
+
+### Environment Variables (Optional)
 ```bash
-python3 auto_scraper.py
+# Customize data directories
+export BLS_DATA_SHEET_DIR=/path/to/excel/files
+export BLS_CACHE_DIR=/path/to/cache
+export BLS_LOG_LEVEL=DEBUG
 ```
 
-**timing metrics tracked:**
-- scraping time (website + download)
-- processing time (excel reading + validation)
-- total cycle time
-- average performance across runs
-- fastest/slowest operations
-- throughput measurements
-
-**performance dashboard output:**
-```
-performance metrics
-------------------------------
-scraping performance:
-  last: 2.34s
-  average: 2.15s
-  fastest: 1.89s
-  slowest: 2.67s
-  total time: 12.90s
-
-processing performance:
-  last: 0.45s
-  average: 0.52s
-  fastest: 0.41s
-  slowest: 0.68s
-  total time: 3.12s
-
-time distribution:
-  scraping: 80.5% (12.90s)
-  processing: 19.5% (3.12s)
+### Windows Example
+```cmd
+set BLS_DATA_SHEET_DIR=C:\BLS_Data
+set BLS_CACHE_DIR=C:\BLS_Cache
 ```
 
-### standalone performance testing
-dedicated performance testing script for benchmarking:
+## Available Data Functions
 
-```bash
-# run basic performance test
-python3 performance_test.py
-
-# run multiple iterations
-python3 performance_test.py --runs 5
-
-# detailed timing output
-python3 performance_test.py --detailed
-```
-
-**performance test includes:**
-- website scraping + download timing
-- excel file reading performance
-- data processing + validation speed
-- ticker-based loading performance
-- throughput calculations (rows/sec, mb/sec)
-- statistical analysis across multiple runs
-
-## core functionality
-
-### data loading functions
 ```python
-from data_loader import load_data, BLSDataClient
+from data import *
 
-# simple function calls with timing
-df = load_data("CPSCJEWE Index", "2025-06")
-df = load_data("All items", "latest")
+# Core functions
+cpi_data = get_cpi()                    # Consumer Price Index
+all_data = get_all_data()              # Everything in latest file
 
-# rest-like client interface
-client = BLSDataClient()
-df = client.get_data("CPIQWAN Index", date="2025-06")
-categories = client.get_categories()
+# Category-specific functions  
+food_data = get_food_data()            # Food prices
+energy_data = get_energy_data()        # Energy prices
+housing_data = get_housing_data()      # Housing/shelter costs
+
+# Custom categories
+transport_data = get_inflation_data("Transportation")
+clothing_data = get_inflation_data("Apparel")
+
+# Summary and analysis
+summary = quick_summary()              # Dict with key metrics
+print_summary()                        # Pretty-printed summary
 ```
 
-### snapshot functions
+## Example Output
+
+```bash
+$ python scraper.py
+🏛️  Starting BLS Scraper
+📁 Data directory: /Users/me/BLS_Data/data_sheet
+📁 Cache directory: /Users/me/BLS_Data/data_cache
+✅ Scraper ready!
+🔍 Checking BLS website for new files...
+📊 Currently have 1 Excel files
+✅ Downloaded new file: news-release-table1-202507.xlsx
+⏱️  Download took 3.45 seconds
+📋 Processing news-release-table1-202507.xlsx
+✅ Processed 89 data points
+⏱️  Processing took 0.82 seconds
+
+==================================================
+📊 BLS SCRAPER STATUS
+==================================================
+📁 Excel files: 2
+📥 Files downloaded this session: 1
+🔍 Last check: 14:30:25
+📥 Last download: 14:30:28
+📄 Latest file: news-release-table1-202507.xlsx (14:30:28)
+==================================================
+```
+
+## Data Summary Example
+
 ```python
-from bls_snapshots import cpi, inflation, housing, change
-
-# comprehensive cpi snapshot
-df = cpi("2025-06-01")
-
-# focused inflation indicators
-df = inflation("2025-06-01")
-
-# housing-specific data
-df = housing("2025-06-01")
-
-# month-over-month change calculations
-mom = change("2025-06-01", "CPI All Items")
+from data import print_summary
+print_summary()
 ```
 
-## automatic data updates
-
-### two-tab workflow
-
-**tab 1: auto-update (keep running)**
-```bash
-python3 auto_scraper.py
 ```
-- monitors bls website automatically
-- downloads new excel files when released  
-- processes data in real-time with timing
-- provides performance dashboard
-- keeps data fresh
+========================================
+📊 INFLATION SUMMARY
+========================================
+Headline Cpi   : 3.2
+Food           : 2.1
+Energy         : 4.5
+Shelter        : 5.8
+========================================
+```
 
-**tab 2: analysis (use data immediately)**
+## Troubleshooting
+
+### No Excel files found
+1. Run `python scraper.py` first to download files
+2. Check that directories exist: `python -c "from config import Config; Config.print_configuration()"`
+
+### Path issues on Windows
+Make sure you're using forward slashes or the config system:
 ```python
-from data_loader import load_data
-from bls_snapshots import cpi, quick_summary
-
-# data is always fresh with performance metrics
-df = load_data("All items", "latest")
-summary = quick_summary("latest")
+from config import Config
+data_dir = Config.DATA_SHEET_DIR  # Automatically correct for your OS
 ```
 
-## architecture and performance
-
-### smart data sources with fallbacks
-```
-excel files → bls api → sample data
-     ↓           ↓          ↓
-  [primary]   [fallback]  [demo]
-     ↓           ↓          ↓
-    optimized dataframes
-```
-
-### performance features
-- **3x faster** than original implementation
-- **smart caching** with ttl and thread safety
-- **comprehensive timing** for all operations
-- **automatic fallbacks** when sources fail
-- **function-based interface** (no complex classes)
-- **real-time performance monitoring**
-
-### timing measurements
-all operations include detailed timing:
-- **scraping**: website access + file download
-- **processing**: excel reading + data validation
-- **loading**: ticker-based data retrieval
-- **caching**: cache hit/miss performance
-- **throughput**: rows per second processing
-
-## commands for deleted xlsx files
-
-when xlsx files are deleted and you need fresh data:
-
-### option 1: manual download (fastest)
-```bash
-python3 -c "from xlsx_loader import BLSExcelDownloader; d = BLSExcelDownloader(); print('Downloaded:', d.download_latest_cpi_file())"
-```
-
-### option 2: auto-scraper with performance monitoring (recommended)
-```bash
-python3 auto_scraper.py
-```
-- automatically detects missing files
-- downloads latest bls releases
-- provides comprehensive timing metrics
-- runs continuously for updates
-
-### option 3: performance testing while downloading
-```bash
-python3 performance_test.py --runs 3
-```
-- benchmarks complete download cycle
-- measures scraping and processing performance
-- provides statistical analysis
-
-### option 4: direct excel loader
-```bash
-python3 -c "from xlsx_loader import ExcelDataLoader; loader = ExcelDataLoader(); data = loader.load_data('cpi', '2025-06'); print(f'Loaded {len(data)} data points')"
-```
-
-## file structure
-
-```
-bls scraper api/
-├── main interface
-│   ├── bls_snapshots.py        # primary interface functions
-│   ├── bls_core.py            # optimized data engine
-│   ├── data_loader.py         # comprehensive data loading
-│   └── cpi_snapshot.py        # original snapshot function
-│
-├── auto-update with timing
-│   ├── auto_scraper.py        # automatic updates + performance monitoring
-│   ├── performance_test.py    # standalone performance testing
-│   └── xlsx_loader/           # excel processing system
-│       ├── downloader.py      # bls website scraping
-│       └── processor.py       # excel data processing
-│
-├── data storage
-│   ├── data_sheet/           # excel files from bls
-│   └── data_cache/           # performance cache
-│
-├── api server (optional)
-│   ├── bls_api.py            # fastapi server
-│   └── requirements.txt      # dependencies
-│
-└── documentation
-    ├── README.md             # this file
-    └── basic_example.py      # usage examples
-```
-
-## performance optimization
-
-### caching system
-- **file-based caching** with modification time tracking
-- **memory caching** with lru decorators
-- **thread-safe operations** with locks
-- **automatic cache invalidation** based on file age
-
-### timing optimizations
-- **parallel processing** where possible
-- **lazy loading** of expensive operations
-- **optimized excel reading** with read-only mode
-- **efficient dataframe operations** using polars + pandas
-
-### monitoring capabilities
-- **real-time performance tracking**
-- **statistical analysis** across multiple runs
-- **throughput measurements** (rows/sec, mb/sec)
-- **bottleneck identification** (scraping vs processing)
-
-## dependencies
-
-**core requirements:**
-```
-pandas>=2.1.0          # dataframe operations
-polars>=0.20.0         # high-performance processing
-requests>=2.31.0       # http requests
-beautifulsoup4>=4.12.2 # web scraping
-openpyxl>=3.1.2        # excel file reading
-schedule>=1.2.0        # automatic scheduling
-python-dateutil        # date handling
-```
-
-**optional enhancements:**
-```
-fastapi>=0.104.1       # api server
-uvicorn>=0.24.0        # server runtime
-structlog>=23.2.0      # enhanced logging
-```
-
-## usage examples
-
-### basic data loading with timing
+### Test everything is working
 ```python
-import time
-from data_loader import load_data
-
-start_time = time.time()
-df = load_data("All items", "latest")
-duration = time.time() - start_time
-
-print(f"loaded {df.shape[0]} rows in {duration:.3f}s")
+from data import test_functions
+test_functions()
 ```
 
-### performance monitoring in scripts
-```python
-from auto_scraper import BLSAutoScraper
+## Dependencies
 
-scraper = BLSAutoScraper()
-scraper.check_for_updates()  # includes automatic timing
-print(f"last scraping time: {scraper.stats['last_scraping_time']:.3f}s")
-```
+- **pandas** - Data manipulation
+- **openpyxl** - Excel file reading  
+- **requests** - Web downloads
+- **beautifulsoup4** - HTML parsing
+- **python-dateutil** - Date handling
 
-### comprehensive performance testing
-```bash
-# test current performance
-python3 performance_test.py
+## How It Works
 
-# benchmark with multiple runs
-python3 performance_test.py --runs 10
+1. **Scraper** (`scraper.py`) monitors the BLS website for new Excel files
+2. **Downloader** (`xlsx_loader/downloader.py`) downloads files from BLS supplemental files page
+3. **Processor** (`xlsx_loader/processor.py`) extracts CPI data from Excel files
+4. **Data functions** (`data.py`) provide easy access to the processed data
+5. **Config** (`config.py`) handles cross-platform file paths and settings
 
-# detailed timing breakdown
-python3 performance_test.py --detailed
-```
-
-## production deployment
-
-### reliability features
-- **graceful fallbacks** when data sources fail
-- **comprehensive error handling** with detailed logging
-- **thread-safe operations** for concurrent access
-- **automatic retries** for network requests
-- **performance monitoring** for operational insights
-
-### scalability features
-- **efficient memory usage** with optimized dataframes
-- **smart caching** prevents redundant operations
-- **batch processing** for multiple indicators
-- **async-ready architecture** for high concurrency
-
-### monitoring and alerting
-- **real-time performance metrics**
-- **timing threshold alerts** (configurable)
-- **data freshness monitoring**
-- **operational dashboard** via auto_scraper
-
-## troubleshooting performance
-
-### slow scraping (> 5 seconds)
-- check network connectivity
-- verify bls website accessibility
-- monitor download speed via performance_test.py
-
-### slow processing (> 2 seconds)
-- check excel file size and complexity
-- verify available memory
-- review processing pipeline efficiency
-
-### cache performance issues
-- clear cache directory: data_cache/
-- restart auto_scraper for fresh state
-- check disk space for cache operations
-
-## getting started workflow
-
-1. **install dependencies:**
-   ```bash
-   pip3 install -r requirements.txt
-   ```
-
-2. **start performance monitoring:**
-   ```bash
-   python3 auto_scraper.py
-   ```
-
-3. **test performance:**
-   ```bash
-   python3 performance_test.py
-   ```
-
-4. **use data with timing awareness:**
-   ```python
-   from data_loader import load_data
-   df = load_data("All items", "latest")
-   ```
-
-the system is designed for production use with comprehensive performance monitoring and optimization throughout the data pipeline.
+The system is designed to be simple to understand, modify, and use while providing robust data access for economic analysis.

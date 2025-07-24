@@ -25,12 +25,12 @@ class ExcelDataLoader:
     Main interface for Excel-based BLS data loading
     """
     
-    def __init__(self, data_sheet_dir: str = "data_sheet"):
+    def __init__(self, data_sheet_dir: str = None):
         """
         Initialize Excel data loader
         
         Args:
-            data_sheet_dir: Directory to store Excel files
+            data_sheet_dir: Directory to store Excel files (defaults to config setting)
         """
         self.downloader = BLSExcelDownloader(data_sheet_dir)
         self.processor = ExcelDataProcessor(data_sheet_dir)

@@ -12,10 +12,17 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
+import os
 
 import pandas as pd
 import openpyxl
 from openpyxl import load_workbook
+
+# Import configuration
+sys_path = str(Path(__file__).parent.parent)
+if sys_path not in os.sys.path:
+    os.sys.path.insert(0, sys_path)
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +32,17 @@ class ExcelDataProcessor:
     Processes BLS CPI Excel files to extract index data
     """
     
-    def __init__(self, data_sheet_dir: str = "data_sheet"):
+    def __init__(self, data_sheet_dir: str = None):
         """
         Initialize processor
         
         Args:
-            data_sheet_dir: Directory containing Excel files
+            data_sheet_dir: Directory containing Excel files (defaults to config setting)
         """
-        self.data_sheet_dir = Path(data_sheet_dir)
+        if data_sheet_dir is None:
+            self.data_sheet_dir = Config.DATA_SHEET_DIR
+        else:
+            self.data_sheet_dir = Path(data_sheet_dir)
         
         # Common CPI series patterns to look for
         self.cpi_series_patterns = {
@@ -61,7 +71,7 @@ class ExcelDataProcessor:
             List of data dictionaries compatible with existing data_loader format
         """
         try:
-            logger.info(f"Processing Excel file: {excel_file}")
+            logger.info(f"processing excel file: {excel_file}")
             
             # Load workbook
             workbook = load_workbook(excel_file, data_only=True)
@@ -70,23 +80,23 @@ class ExcelDataProcessor:
             
             # Process each worksheet
             for sheet_name in workbook.sheetnames:
-                logger.info(f"Processing sheet: {sheet_name}")
+                logger.info(f"processing sheet: {sheet_name}")
                 
                 worksheet = workbook[sheet_name]
                 sheet_data = self._extract_sheet_data(worksheet, ticker, target_date)
                 
                 if sheet_data:
                     all_data.extend(sheet_data)
-                    logger.info(f"Extracted {len(sheet_data)} data points from {sheet_name}")
+                    logger.info(f"extracted {len(sheet_data)} data points from {sheet_name}")
             
             # Filter to most recent 2 months
             filtered_data = self._filter_recent_months(all_data, 2)
             
-            logger.info(f"Total extracted data points: {len(filtered_data)}")
+            logger.info(f"total extracted data points: {len(filtered_data)}")
             return filtered_data
             
         except Exception as e:
-            logger.error(f"Error processing Excel file {excel_file}: {e}")
+            logger.error(f"error processing excel file {excel_file}: {e}")
             return []
     
     def _extract_sheet_data(self, worksheet, ticker: str, target_date: str) -> List[Dict]:
@@ -137,7 +147,7 @@ class ExcelDataProcessor:
             return extracted_data
             
         except Exception as e:
-            logger.error(f"Error extracting sheet data: {e}")
+            logger.error(f"error extracting sheet data: {e}")
             return []
     
     def _extract_standard_format(self, df: pd.DataFrame, ticker: str) -> List[Dict]:
@@ -209,7 +219,7 @@ class ExcelDataProcessor:
             return data_points
             
         except Exception as e:
-            logger.debug(f"Standard format extraction failed: {e}")
+            logger.debug(f"standard format extraction failed: {e}")
             return []
     
     def _extract_timeseries_format(self, df: pd.DataFrame, ticker: str) -> List[Dict]:
@@ -274,7 +284,7 @@ class ExcelDataProcessor:
             return data_points
             
         except Exception as e:
-            logger.debug(f"Time series format extraction failed: {e}")
+            logger.debug(f"time series format extraction failed: {e}")
             return []
     
     def _extract_pivot_format(self, df: pd.DataFrame, ticker: str) -> List[Dict]:
@@ -306,7 +316,7 @@ class ExcelDataProcessor:
             return data_points
             
         except Exception as e:
-            logger.debug(f"Pivot format extraction failed: {e}")
+            logger.debug(f"pivot format extraction failed: {e}")
             return []
     
     def _find_year_month_context(self, df: pd.DataFrame, row_idx: int, col_idx: int) -> Tuple[Optional[int], Optional[int]]:
@@ -348,7 +358,7 @@ class ExcelDataProcessor:
             return year, month
             
         except Exception as e:
-            logger.debug(f"Error finding year/month context: {e}")
+            logger.debug(f"error finding year/month context: {e}")
             return None, None
     
     def _extract_month_from_text(self, text: str) -> Optional[int]:
@@ -463,12 +473,12 @@ class ExcelDataProcessor:
                     if period in seen_periods:
                         filtered_data.append(item)
             
-            logger.info(f"Filtered to {len(filtered_data)} data points for {len(seen_periods)} recent periods")
+            logger.info(f"filtered to {len(filtered_data)} data points for {len(seen_periods)} recent periods")
             
             return filtered_data
             
         except Exception as e:
-            logger.error(f"Error filtering recent months: {e}")
+            logger.error(f"error filtering recent months: {e}")
             return data  # Return original data if filtering fails
     
     def get_file_info(self, excel_file: Path) -> Dict:
@@ -493,7 +503,7 @@ class ExcelDataProcessor:
             }
             
         except Exception as e:
-            logger.error(f"Error getting file info for {excel_file}: {e}")
+            logger.error(f"error getting file info for {excel_file}: {e}")
             return {}
 
 
@@ -504,9 +514,9 @@ if __name__ == "__main__":
     processor = ExcelDataProcessor()
     
     # Test with any Excel file in data_sheet folder
-    data_sheet_path = Path("data_sheet")
+    data_sheet_path = Config.DATA_SHEET_DIR
     if data_sheet_path.exists():
-        excel_files = list(data_sheet_path.glob("*.xlsx"))
+        excel_files = list(data_sheet_path.glob(Config.EXCEL_FILE_PATTERN))
         if excel_files:
             test_file = excel_files[0]
             print(f"Testing with file: {test_file}")
@@ -518,6 +528,6 @@ if __name__ == "__main__":
                 for item in data[:5]:
                     print(f"  {item}")
         else:
-            print("No Excel files found in data_sheet folder")
+            print(f"No Excel files found in {data_sheet_path}")
     else:
-        print("data_sheet folder not found")
+        print(f"{data_sheet_path} folder not found")

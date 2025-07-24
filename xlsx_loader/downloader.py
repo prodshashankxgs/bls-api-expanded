@@ -22,6 +22,12 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+# Import configuration
+sys_path = str(Path(__file__).parent.parent)
+if sys_path not in os.sys.path:
+    os.sys.path.insert(0, sys_path)
+from config import Config
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,17 +36,21 @@ class BLSExcelDownloader:
     Downloads Excel files from BLS supplemental files page
     """
     
-    def __init__(self, data_sheet_dir: str = "data_sheet"):
+    def __init__(self, data_sheet_dir: str = None):
         """
         Initialize downloader
         
         Args:
-            data_sheet_dir: Directory to save Excel files
+            data_sheet_dir: Directory to save Excel files (defaults to config setting)
         """
-        self.data_sheet_dir = Path(data_sheet_dir)
+        if data_sheet_dir is None:
+            self.data_sheet_dir = Config.DATA_SHEET_DIR
+        else:
+            self.data_sheet_dir = Path(data_sheet_dir)
+        
         self.data_sheet_dir.mkdir(exist_ok=True)
         
-        self.base_url = "https://www.bls.gov/cpi/tables/supplemental-files/"
+        self.base_url = Config.BLS_CPI_SUPPLEMENTAL_URL
         self.session = self._create_session()
         
     def _create_session(self) -> requests.Session:
@@ -48,8 +58,8 @@ class BLSExcelDownloader:
         session = requests.Session()
         
         retry_strategy = Retry(
-            total=3,
-            backoff_factor=2,
+            total=Config.MAX_RETRIES,
+            backoff_factor=Config.RETRY_BACKOFF_FACTOR,
             status_forcelist=[429, 500, 502, 503, 504],
         )
         
@@ -79,21 +89,21 @@ class BLSExcelDownloader:
             BeautifulSoup object of the page or None if failed
         """
         try:
-            logger.info(f"Fetching BLS supplemental files page: {self.base_url}")
+            logger.info(f"fetching bls supplemental files page: {self.base_url}")
             
-            response = self.session.get(self.base_url, timeout=30)
+            response = self.session.get(self.base_url, timeout=Config.HTTP_TIMEOUT)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
-            logger.info("Successfully fetched BLS supplemental files page")
+            logger.info("successfully fetched bls supplemental files page")
             
             return soup
             
         except requests.RequestException as e:
-            logger.error(f"Failed to fetch BLS page: {e}")
+            logger.error(f"failed to fetch bls page: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error fetching BLS page: {e}")
+            logger.error(f"unexpected error fetching bls page: {e}")
             return None
     
     def find_cpi_excel_links(self, soup: BeautifulSoup, target_date: str = None) -> List[Dict]:
@@ -149,14 +159,14 @@ class BLSExcelDownloader:
             # Sort by date (most recent first)
             excel_links.sort(key=lambda x: x.get('date', ''), reverse=True)
             
-            logger.info(f"Found {len(excel_links)} CPI Excel files")
+            logger.info(f"found {len(excel_links)} cpi excel files")
             for link in excel_links[:5]:  # Log first 5
-                logger.info(f"  - {link['filename']}: {link['description']}")
+                logger.info(f"- {link['filename']}: {link['description']}")
                 
             return excel_links
             
         except Exception as e:
-            logger.error(f"Error finding Excel links: {e}")
+            logger.error(f"error finding excel links: {e}")
             return []
     
     def _extract_date_from_text(self, text: str) -> str:
@@ -215,7 +225,7 @@ class BLSExcelDownloader:
             return datetime.now().strftime("%Y-%m")
             
         except Exception as e:
-            logger.debug(f"Error extracting date from '{text}': {e}")
+            logger.debug(f"error extracting date from '{text}': {e}")
             return ""
     
     def download_file(self, url: str, filename: str) -> Optional[Path]:
@@ -235,34 +245,34 @@ class BLSExcelDownloader:
             # Skip if file already exists and is recent
             if file_path.exists():
                 file_age = datetime.now() - datetime.fromtimestamp(file_path.stat().st_mtime)
-                if file_age < timedelta(hours=6):  # Skip if less than 6 hours old
-                    logger.info(f"File {filename} already exists and is recent")
+                if file_age < timedelta(hours=Config.EXCEL_FILE_MAX_AGE_HOURS):
+                    logger.info(f"file {filename} already exists and is recent")
                     return file_path
             
-            logger.info(f"Downloading {filename} from {url}")
+            logger.info(f"downloading {filename} from {url}")
             
-            response = self.session.get(url, timeout=60, stream=True)
+            response = self.session.get(url, timeout=Config.DOWNLOAD_TIMEOUT, stream=True)
             response.raise_for_status()
             
-            # Check content type
+            # check content type
             content_type = response.headers.get('content-type', '').lower()
             if 'excel' not in content_type and 'spreadsheet' not in content_type and 'octet-stream' not in content_type:
-                logger.warning(f"Unexpected content type: {content_type}")
+                logger.warning(f"unexpected content type: {content_type}")
             
-            # Download file
+            # download file
             with open(file_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
             
-            logger.info(f"Successfully downloaded {filename} ({file_path.stat().st_size} bytes)")
+            logger.info(f"successfully downloaded {filename} ({file_path.stat().st_size} bytes)")
             return file_path
             
         except requests.RequestException as e:
-            logger.error(f"Failed to download {filename}: {e}")
+            logger.error(f"failed to download {filename}: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error downloading {filename}: {e}")
+            logger.error(f"unexpected error downloading {filename}: {e}")
             return None
     
     def download_latest_cpi_file(self, target_date: str = None) -> Optional[Path]:
@@ -284,7 +294,7 @@ class BLSExcelDownloader:
             # Find Excel links
             excel_links = self.find_cpi_excel_links(soup, target_date)
             if not excel_links:
-                logger.error("No CPI Excel files found on BLS page")
+                logger.error("no cpi excel files found on bls page")
                 return None
             
             # Find target file
@@ -300,24 +310,24 @@ class BLSExcelDownloader:
             # If no specific target found, use the most recent
             if not target_file:
                 target_file = excel_links[0]
-                logger.info(f"Using most recent file: {target_file['filename']}")
+                logger.info(f"using most recent file: {target_file['filename']}")
             
             # Download the file
             return self.download_file(target_file['url'], target_file['filename'])
             
         except Exception as e:
-            logger.error(f"Error downloading CPI file: {e}")
+            logger.error(f"error downloading cpi file: {e}")
             return None
     
     def get_available_files(self) -> List[str]:
         """Get list of downloaded Excel files"""
         try:
             files = []
-            for file_path in self.data_sheet_dir.glob("*.xlsx"):
+            for file_path in self.data_sheet_dir.glob(Config.EXCEL_FILE_PATTERN):
                 files.append(file_path.name)
             return sorted(files, reverse=True)  # Most recent first
         except Exception as e:
-            logger.error(f"Error listing files: {e}")
+            logger.error(f"error listing files: {e}")
             return []
     
     def cleanup_old_files(self, keep_days: int = 30):
@@ -325,13 +335,13 @@ class BLSExcelDownloader:
         try:
             cutoff_time = datetime.now() - timedelta(days=keep_days)
             
-            for file_path in self.data_sheet_dir.glob("*.xlsx"):
+            for file_path in self.data_sheet_dir.glob(Config.EXCEL_FILE_PATTERN):
                 if datetime.fromtimestamp(file_path.stat().st_mtime) < cutoff_time:
                     file_path.unlink()
-                    logger.info(f"Removed old file: {file_path.name}")
+                    logger.info(f"removed old file: {file_path.name}")
                     
         except Exception as e:
-            logger.error(f"Error cleaning up files: {e}")
+            logger.error(f"error cleaning up files: {e}")
 
 
 if __name__ == "__main__":
