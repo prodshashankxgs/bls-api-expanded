@@ -500,7 +500,7 @@ def load_data(ticker: str, date: Optional[str] = None) -> pl.DataFrame:
         df = get_excel_data_for_ticker(ticker, date)
         
         if not df.is_empty():
-            logger.debug(f"✅ Found Excel data for {ticker}")
+            logger.debug(f"Found Excel data for {ticker}")
             return df
         
         # Try BLS API as fallback
@@ -558,7 +558,7 @@ class BLSDataClient:
         if use_cache and self._is_cached(cache_key):
             with _cache_lock:
                 self._stats['cache_hits'] += 1
-                logger.debug(f"📦 Cache hit for {ticker}")
+                logger.debug(f"Cache hit for {ticker}")
                 return self._cache[cache_key]
         
         # Cache miss - load fresh data

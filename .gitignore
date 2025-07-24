@@ -77,13 +77,14 @@ tramp
 # data files and caches
 # ================================
 
-# downloaded excel files (user can re-download)
-data_sheet/*.xlsx
-data_sheet/*.xls
+# excel files (user can re-download)
+*.xlsx
+*.xls
+data_sheet/*
 !data_sheet/.gitkeep
 
 # performance and api caches (regenerated automatically)
-data_cache/
+data_cache/*
 !data_cache/.gitkeep
 
 # processed data exports

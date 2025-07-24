@@ -154,7 +154,7 @@ class BLSAutoScraper:
                     # Update processing timing stats
                     self._update_processing_stats(processing_duration)
                     
-                    logger.info(f"⏱️  Performance: Scraping {scraping_duration:.2f}s | Processing {processing_duration:.2f}s | Total {scraping_duration + processing_duration:.2f}s")
+                    logger.info(f"Performance: Scraping {scraping_duration:.2f}s | Processing {processing_duration:.2f}s | Total {scraping_duration + processing_duration:.2f}s")
                     return True
                 else:
                     logger.info(f"No new files - data is up to date (checked in {scraping_duration:.2f}s)")
@@ -311,7 +311,7 @@ class BLSAutoScraper:
             
             # Performance Metrics
             print()
-            print("⏱️  PERFORMANCE METRICS")
+            print("PERFORMANCE METRICS")
             print("-" * 30)
             
             # Scraping metrics
