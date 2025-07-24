@@ -1,303 +1,368 @@
-# BLS Economic Data Snapshots 🏛️
+# bls economic data scraper api
 
-**The cleanest, fastest way to access US Bureau of Labor Statistics data.**
+**comprehensive solution for accessing us bureau of labor statistics data with performance timing**
 
-Optimized around the `get_cpi_snapshot()` function pattern - every function returns clean pandas DataFrames with current month + previous month data, SA/NSA adjustments, and automatic date handling.
+optimized data engine with real-time performance monitoring, automatic excel file processing, and smart fallback systems. includes comprehensive timing measurements for scraping and processing operations.
 
-## 🚀 Quick Start
+## quick start
 
-### Installation
+### installation
 ```bash
 cd "BLS Scraper API"
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
-### Immediate Usage
+### immediate usage
 ```python
-from bls_snapshots import cpi, inflation, housing, change, quick_summary
+from data_loader import load_data
+from bls_snapshots import cpi, inflation, housing
 
-# Get comprehensive CPI snapshot
-df = cpi("2025-06-01")
-print(df)
+# get data with automatic timing
+df = load_data("All items", "latest")
+snapshot = cpi("2025-06-01")
 ```
 
-**Output:**
-```
-                 CPI All Items  CPI Core  Food   Energy  Shelter  ...
-Date       Adj                                                   
-2025-05-01 NSA        310.112   328.364  339.5   284.3   415.5
-           SA         309.522   328.364  339.5   284.3   415.5  
-2025-06-01 NSA        312.003   330.1    340.2   291.1   416.2
-           SA         310.556   329.8    340.2   291.1   416.2
+## performance monitoring system
+
+### automatic timing in auto_scraper
+the auto_scraper now includes comprehensive performance monitoring:
+
+```bash
+python3 auto_scraper.py
 ```
 
-## 🎯 Core Functions
+**timing metrics tracked:**
+- scraping time (website + download)
+- processing time (excel reading + validation)
+- total cycle time
+- average performance across runs
+- fastest/slowest operations
+- throughput measurements
 
-### **Primary Snapshots**
+**performance dashboard output:**
+```
+performance metrics
+------------------------------
+scraping performance:
+  last: 2.34s
+  average: 2.15s
+  fastest: 1.89s
+  slowest: 2.67s
+  total time: 12.90s
+
+processing performance:
+  last: 0.45s
+  average: 0.52s
+  fastest: 0.41s
+  slowest: 0.68s
+  total time: 3.12s
+
+time distribution:
+  scraping: 80.5% (12.90s)
+  processing: 19.5% (3.12s)
+```
+
+### standalone performance testing
+dedicated performance testing script for benchmarking:
+
+```bash
+# run basic performance test
+python3 performance_test.py
+
+# run multiple iterations
+python3 performance_test.py --runs 5
+
+# detailed timing output
+python3 performance_test.py --detailed
+```
+
+**performance test includes:**
+- website scraping + download timing
+- excel file reading performance
+- data processing + validation speed
+- ticker-based loading performance
+- throughput calculations (rows/sec, mb/sec)
+- statistical analysis across multiple runs
+
+## core functionality
+
+### data loading functions
 ```python
-# Comprehensive CPI data
+from data_loader import load_data, BLSDataClient
+
+# simple function calls with timing
+df = load_data("CPSCJEWE Index", "2025-06")
+df = load_data("All items", "latest")
+
+# rest-like client interface
+client = BLSDataClient()
+df = client.get_data("CPIQWAN Index", date="2025-06")
+categories = client.get_categories()
+```
+
+### snapshot functions
+```python
+from bls_snapshots import cpi, inflation, housing, change
+
+# comprehensive cpi snapshot
 df = cpi("2025-06-01")
 
-# Key inflation indicators only  
+# focused inflation indicators
 df = inflation("2025-06-01")
 
-# Housing-specific data
+# housing-specific data
 df = housing("2025-06-01")
 
-# Clothing categories
-df = clothing("2025-06-01")
-
-# All snapshots at once
-all_data = complete("2025-06-01")
-```
-
-### **Smart Analysis** 
-```python
-# Month-over-month change for any category
+# month-over-month change calculations
 mom = change("2025-06-01", "CPI All Items")
-print(f"CPI changed {mom['NSA_change']:.2f}% month-over-month")
-
-# Comprehensive inflation report
-report = inflation_report("2025-06-01")
-
-# Human-readable summary
-summary = quick_summary("2025-06-01")
-print(summary)
 ```
 
-## 📊 Perfect Two-Tab Workflow
+## automatic data updates
 
-### **Tab 1: Auto-Update (Keep Running)**
+### two-tab workflow
+
+**tab 1: auto-update (keep running)**
 ```bash
-python auto_scraper.py
+python3 auto_scraper.py
 ```
-- ✅ Monitors BLS website automatically
-- ✅ Downloads new Excel files when released  
-- ✅ Processes data in real-time
-- ✅ Keeps your snapshots fresh
+- monitors bls website automatically
+- downloads new excel files when released  
+- processes data in real-time with timing
+- provides performance dashboard
+- keeps data fresh
 
-### **Tab 2: Analysis (Use Data Immediately)**
+**tab 2: analysis (use data immediately)**
 ```python
-from bls_snapshots import cpi, inflation, quick_summary
+from data_loader import load_data
+from bls_snapshots import cpi, quick_summary
 
-# Your data is always fresh!
-df = cpi("latest")
+# data is always fresh with performance metrics
+df = load_data("All items", "latest")
 summary = quick_summary("latest")
 ```
 
-## 🏗️ Optimized Architecture
+## architecture and performance
 
-### **Data Flow (Smart Fallbacks)**
+### smart data sources with fallbacks
 ```
-Excel Files → BLS API → Sample Data
+excel files → bls api → sample data
      ↓           ↓          ↓
-  [PRIMARY]   [FALLBACK]  [DEMO]
+  [primary]   [fallback]  [demo]
      ↓           ↓          ↓
-    Clean Pandas DataFrames
+    optimized dataframes
 ```
 
-### **Core Components**
-- **`bls_core.py`** - Optimized data engine (replaces complex data_loader.py)
-- **`bls_snapshots.py`** - Ultra-simple interface (main entry point)
-- **`auto_scraper.py`** - Automatic data updates
-- **`cpi_snapshot.py`** - Original function (your specification)
+### performance features
+- **3x faster** than original implementation
+- **smart caching** with ttl and thread safety
+- **comprehensive timing** for all operations
+- **automatic fallbacks** when sources fail
+- **function-based interface** (no complex classes)
+- **real-time performance monitoring**
 
-### **Performance Features**
-- ⚡ **3x faster** than original system
-- 🧠 **Smart caching** with TTL and threading
-- 📈 **Multi-index DataFrames** (Date, Adjustment)
-- 🔄 **Automatic fallbacks** when sources fail
-- 🎯 **Function-based** (no complex classes)
+### timing measurements
+all operations include detailed timing:
+- **scraping**: website access + file download
+- **processing**: excel reading + data validation
+- **loading**: ticker-based data retrieval
+- **caching**: cache hit/miss performance
+- **throughput**: rows per second processing
 
-## 📈 Advanced Usage
+## commands for deleted xlsx files
 
-### **Jupyter Notebook Setup**
-```python
-# Cell 1: Setup
-from bls_snapshots import setup_notebook
-setup_notebook()
+when xlsx files are deleted and you need fresh data:
 
-# Cell 2: Use any function
-df = cpi("2025-06-01")
-mom = change("2025-06-01", "CPI All Items") 
-summary = quick_summary("latest")
+### option 1: manual download (fastest)
+```bash
+python3 -c "from xlsx_loader import BLSExcelDownloader; d = BLSExcelDownloader(); print('Downloaded:', d.download_latest_cpi_file())"
 ```
 
-### **Time Series Analysis**
-```python
-# Get multiple months
-dates = ["2025-04-01", "2025-05-01", "2025-06-01"]
-time_series = []
+### option 2: auto-scraper with performance monitoring (recommended)
+```bash
+python3 auto_scraper.py
+```
+- automatically detects missing files
+- downloads latest bls releases
+- provides comprehensive timing metrics
+- runs continuously for updates
 
-for date in dates:
-    inf_data = inflation(date)
-    # Extract headline CPI for each month
-    headline = inf_data.loc[(date, 'NSA'), 'CPI All Items']
-    time_series.append({"date": date, "cpi": headline})
+### option 3: performance testing while downloading
+```bash
+python3 performance_test.py --runs 3
+```
+- benchmarks complete download cycle
+- measures scraping and processing performance
+- provides statistical analysis
 
-ts_df = pd.DataFrame(time_series)
+### option 4: direct excel loader
+```bash
+python3 -c "from xlsx_loader import ExcelDataLoader; loader = ExcelDataLoader(); data = loader.load_data('cpi', '2025-06'); print(f'Loaded {len(data)} data points')"
 ```
 
-### **Category Comparison**
-```python
-# Compare all major categories
-categories = ["CPI All Items", "CPI Core", "Food", "Energy", "Shelter"]
-
-for cat in categories:
-    mom = change("2025-06-01", cat)
-    print(f"{cat}: {mom['NSA_change']:+.2f}% MoM")
-```
-
-## 🛠️ Development Features
-
-### **System Status**
-```python
-from bls_snapshots import status, reset
-
-# Check system health
-print(status())
-
-# Clear cache and reset
-reset()
-```
-
-### **Available Data**
-```python
-from bls_core import get_available_indicators
-
-# See all available indicators
-indicators = get_available_indicators()
-print(f"Available: {len(indicators)} indicators")
-```
-
-## 📦 Dependencies
-
-**Core Requirements:**
-- `pandas` - DataFrame output format
-- `polars` - High-performance data processing  
-- `python-dateutil` - Date arithmetic
-- `openpyxl` - Excel file reading
-- `requests` - BLS API access
-- `beautifulsoup4` - Web scraping
-
-**Optional:**
-- `fastapi` + `uvicorn` - API server
-- `pyarrow` - Enhanced performance
-
-## 🎉 Migration from Old System
-
-### **Before (Complex)**
-```python
-from data_loader import DataLoader
-
-tickers = ["CPSCJEWE Index", "CPIQWAN Index", "CPSCWG Index"]
-dl = DataLoader()
-df = dl.load_data(tickers, "2025-01-01")
-# Returns complex polars DataFrame, requires conversion
-```
-
-### **After (Optimized)**
-```python
-from bls_snapshots import cpi
-
-# Same data, cleaner interface
-df = cpi("2025-06-01")
-# Returns clean pandas DataFrame with multi-index
-```
-
-## 📁 File Structure
+## file structure
 
 ```
-BLS Scraper API/
-├── 🎯 MAIN INTERFACE
-│   ├── bls_snapshots.py        # ⭐ Primary interface (YOUR ENTRY POINT)
-│   ├── bls_core.py            # Optimized data engine
-│   └── cpi_snapshot.py        # Original function (your spec)
+bls scraper api/
+├── main interface
+│   ├── bls_snapshots.py        # primary interface functions
+│   ├── bls_core.py            # optimized data engine
+│   ├── data_loader.py         # comprehensive data loading
+│   └── cpi_snapshot.py        # original snapshot function
 │
-├── 🔄 AUTO-UPDATE
-│   ├── auto_scraper.py        # Automatic data updates
-│   └── xlsx_loader/           # Excel processing
+├── auto-update with timing
+│   ├── auto_scraper.py        # automatic updates + performance monitoring
+│   ├── performance_test.py    # standalone performance testing
+│   └── xlsx_loader/           # excel processing system
+│       ├── downloader.py      # bls website scraping
+│       └── processor.py       # excel data processing
 │
-├── 📊 DATA
-│   ├── data_sheet/           # Excel files from BLS
-│   └── data_cache/           # Performance cache
+├── data storage
+│   ├── data_sheet/           # excel files from bls
+│   └── data_cache/           # performance cache
 │
-├── 📚 EXAMPLES & DOCS  
-│   ├── README.md             # This file
-│   ├── ultimate_example.py   # Complete demonstration
-│   └── examples.py           # Usage patterns
+├── api server (optional)
+│   ├── bls_api.py            # fastapi server
+│   └── requirements.txt      # dependencies
 │
-└── ⚙️ LEGACY/OPTIONAL
-    ├── bls_api.py            # FastAPI server (optional)
-    ├── data_loader.py        # Original complex system
-    └── run.py                # Server startup
+└── documentation
+    ├── README.md             # this file
+    └── basic_example.py      # usage examples
 ```
 
-## 🚀 Production Ready
+## performance optimization
 
-### **Reliability**
-- ✅ **Graceful fallbacks** when data sources fail
-- ✅ **Error handling** with informative messages  
-- ✅ **Thread-safe** caching and file operations
-- ✅ **Automatic retries** for network requests
+### caching system
+- **file-based caching** with modification time tracking
+- **memory caching** with lru decorators
+- **thread-safe operations** with locks
+- **automatic cache invalidation** based on file age
 
-### **Performance**
-- ⚡ **Sub-second response** times with caching
-- 🧠 **Smart caching** prevents redundant API calls
-- 📈 **Optimized DataFrames** with minimal memory usage
-- 🔄 **Lazy loading** of expensive operations
+### timing optimizations
+- **parallel processing** where possible
+- **lazy loading** of expensive operations
+- **optimized excel reading** with read-only mode
+- **efficient dataframe operations** using polars + pandas
 
-### **Scalability** 
-- 📊 **Handles 20+ indicators** simultaneously
-- 🎯 **Consistent interface** across all functions
-- 🔧 **Extensible** for new economic indicators
-- 📈 **Production-tested** data processing
+### monitoring capabilities
+- **real-time performance tracking**
+- **statistical analysis** across multiple runs
+- **throughput measurements** (rows/sec, mb/sec)
+- **bottleneck identification** (scraping vs processing)
 
-## 🎯 Use Cases
+## dependencies
 
-### **Economic Research**
+**core requirements:**
+```
+pandas>=2.1.0          # dataframe operations
+polars>=0.20.0         # high-performance processing
+requests>=2.31.0       # http requests
+beautifulsoup4>=4.12.2 # web scraping
+openpyxl>=3.1.2        # excel file reading
+schedule>=1.2.0        # automatic scheduling
+python-dateutil        # date handling
+```
+
+**optional enhancements:**
+```
+fastapi>=0.104.1       # api server
+uvicorn>=0.24.0        # server runtime
+structlog>=23.2.0      # enhanced logging
+```
+
+## usage examples
+
+### basic data loading with timing
 ```python
-# Compare inflation components
-inflation_data = inflation("latest")
-housing_data = housing("latest") 
-clothing_data = clothing("latest")
+import time
+from data_loader import load_data
 
-# Analyze month-over-month changes
-for category in ["CPI All Items", "CPI Core", "Food", "Energy"]:
-    mom = change("latest", category)
-    print(f"{category}: {mom['NSA_change']:+.2f}%")
+start_time = time.time()
+df = load_data("All items", "latest")
+duration = time.time() - start_time
+
+print(f"loaded {df.shape[0]} rows in {duration:.3f}s")
 ```
 
-### **Financial Analysis**
+### performance monitoring in scripts
 ```python
-# Get comprehensive economic snapshot
-all_data = complete("2025-06-01")
+from auto_scraper import BLSAutoScraper
 
-# Extract key metrics for models
-headline_cpi = all_data['inflation']
-housing_costs = all_data['housing']
-clothing_trends = all_data['clothing']
+scraper = BLSAutoScraper()
+scraper.check_for_updates()  # includes automatic timing
+print(f"last scraping time: {scraper.stats['last_scraping_time']:.3f}s")
 ```
 
-### **Automated Reporting**
-```python
-# Daily inflation summary
-summary = quick_summary("latest")
-print(summary)  # Ready for email/Slack
+### comprehensive performance testing
+```bash
+# test current performance
+python3 performance_test.py
 
-# Structured data for dashboards
-report = inflation_report("latest") 
-# Returns dict with all key metrics
+# benchmark with multiple runs
+python3 performance_test.py --runs 10
+
+# detailed timing breakdown
+python3 performance_test.py --detailed
 ```
 
-## 📞 Support
+## production deployment
 
-**The system is optimized around your original `get_cpi_snapshot()` function behavior.**
+### reliability features
+- **graceful fallbacks** when data sources fail
+- **comprehensive error handling** with detailed logging
+- **thread-safe operations** for concurrent access
+- **automatic retries** for network requests
+- **performance monitoring** for operational insights
 
-Every function follows the same pattern:
-1. **Input**: Date string (e.g., "2025-06-01", "latest")
-2. **Output**: Clean pandas DataFrame with (Date, Adjustment) multi-index
-3. **Data**: Current month + previous month automatically included
-4. **Performance**: Cached, fast, reliable
+### scalability features
+- **efficient memory usage** with optimized dataframes
+- **smart caching** prevents redundant operations
+- **batch processing** for multiple indicators
+- **async-ready architecture** for high concurrency
 
-**Ready to use in production! 🚀**
+### monitoring and alerting
+- **real-time performance metrics**
+- **timing threshold alerts** (configurable)
+- **data freshness monitoring**
+- **operational dashboard** via auto_scraper
+
+## troubleshooting performance
+
+### slow scraping (> 5 seconds)
+- check network connectivity
+- verify bls website accessibility
+- monitor download speed via performance_test.py
+
+### slow processing (> 2 seconds)
+- check excel file size and complexity
+- verify available memory
+- review processing pipeline efficiency
+
+### cache performance issues
+- clear cache directory: data_cache/
+- restart auto_scraper for fresh state
+- check disk space for cache operations
+
+## getting started workflow
+
+1. **install dependencies:**
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+2. **start performance monitoring:**
+   ```bash
+   python3 auto_scraper.py
+   ```
+
+3. **test performance:**
+   ```bash
+   python3 performance_test.py
+   ```
+
+4. **use data with timing awareness:**
+   ```python
+   from data_loader import load_data
+   df = load_data("All items", "latest")
+   ```
+
+the system is designed for production use with comprehensive performance monitoring and optimization throughout the data pipeline.
