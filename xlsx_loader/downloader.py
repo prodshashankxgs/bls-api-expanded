@@ -122,6 +122,12 @@ class BLSExcelDownloader:
         try:
             # Look for links to Excel files (.xlsx, .xls)
             excel_pattern = re.compile(r'\.xlsx?$', re.IGNORECASE)
+            
+            # Prioritize files with cpi-u-YYYYMM.xlsx pattern
+            cpi_u_pattern = re.compile(r'cpi-u-\d{6}\.xlsx$', re.IGNORECASE)
+            # Look for exact "CPI-U" text in link text
+            cpi_u_text_pattern = re.compile(r'^CPI-U$', re.IGNORECASE)
+            # Fallback to general CPI-U pattern
             cpi_pattern = re.compile(r'cpi.*u', re.IGNORECASE)
             
             # Find all links
@@ -133,8 +139,14 @@ class BLSExcelDownloader:
                 
                 # Check if it's an Excel file
                 if excel_pattern.search(href):
-                    # Check if it's CPI-U related
-                    if cpi_pattern.search(text) or cpi_pattern.search(href):
+                    # Check if it matches the specific cpi-u-YYYYMM.xlsx pattern first
+                    is_cpi_u_file = cpi_u_pattern.search(href) or cpi_u_pattern.search(text)
+                    # Check for exact "CPI-U" text
+                    is_cpi_u_text = cpi_u_text_pattern.match(text.strip())
+                    # Fallback to general CPI-U pattern
+                    is_cpi_general = cpi_pattern.search(text) or cpi_pattern.search(href)
+                    
+                    if is_cpi_u_file or is_cpi_general:
                         
                         # Build full URL
                         if href.startswith('http'):
@@ -148,16 +160,20 @@ class BLSExcelDownloader:
                         # Try to extract date from text or filename
                         date_info = self._extract_date_from_text(text + ' ' + filename)
                         
+                        # Prioritize cpi-u-YYYYMM.xlsx files
+                        priority = 1 if is_cpi_u_file else 2
+                        
                         excel_links.append({
                             'url': full_url,
                             'filename': filename,
                             'date': date_info,
                             'description': text,
-                            'link_text': text
+                            'link_text': text,
+                            'priority': priority
                         })
             
-            # Sort by date (most recent first)
-            excel_links.sort(key=lambda x: x.get('date', ''), reverse=True)
+            # Sort by priority first (cpi-u-YYYYMM.xlsx files first), then by date (most recent first)
+            excel_links.sort(key=lambda x: (x.get('priority', 2), -int(x.get('date', '').replace('-', '') or '0')))
             
             logger.info(f"found {len(excel_links)} cpi excel files")
             for link in excel_links[:5]:  # Log first 5
@@ -251,7 +267,7 @@ class BLSExcelDownloader:
             
             logger.info(f"downloading {filename} from {url}")
             
-            response = self.session.get(url, timeout=Config.DOWNLOAD_TIMEOUT, stream=True)
+            response = self.session.get(url, timeout=Config.DOWNLOAD_TIMEOUT, stream=True, verify=False)
             response.raise_for_status()
             
             # check content type
@@ -301,13 +317,25 @@ class BLSExcelDownloader:
             target_file = None
             
             if target_date:
-                # Look for specific date
+                # Convert target_date to YYYYMM format for filename matching
+                target_yyyymm = target_date.replace('-', '')
+                target_filename = f"cpi-u-{target_yyyymm}.xlsx"
+                
+                # Look for specific cpi-u-YYYYMM.xlsx file first
                 for link in excel_links:
-                    if target_date in link.get('date', '') or target_date.replace('-', '') in link.get('filename', ''):
+                    if target_filename.lower() in link.get('filename', '').lower():
                         target_file = link
+                        logger.info(f"found target file: {target_file['filename']}")
                         break
+                
+                # Fallback to date matching in filename or date field
+                if not target_file:
+                    for link in excel_links:
+                        if target_date in link.get('date', '') or target_yyyymm in link.get('filename', ''):
+                            target_file = link
+                            break
             
-            # If no specific target found, use the most recent
+            # If no specific target found, use the highest priority (cpi-u-YYYYMM.xlsx) file
             if not target_file:
                 target_file = excel_links[0]
                 logger.info(f"using most recent file: {target_file['filename']}")
