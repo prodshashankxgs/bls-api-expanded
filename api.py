@@ -45,7 +45,7 @@ if str(current_dir) not in sys.path:
 # Import our BLS components
 try:
     from bls_package import get_available_categories, check_setup
-    from load_data_enhanced import load_data, load_data_to_dataframe, calculate_inflation_rates
+    from load_data_enhanced import load_data, load_data_to_dataframe, load_data_long_format, calculate_inflation_rates
     from config import Config
     from scraper import BLSScraper
 except ImportError as e:
@@ -107,8 +107,8 @@ class DataRequest(BaseModel):
     def validate_categories(cls, v):
         if not v:
             raise ValueError("At least one category must be specified")
-        if len(v) > 20:
-            raise ValueError("Maximum 20 categories allowed per request")
+        if len(v) > 200:
+            raise ValueError("Maximum 200 categories allowed per request")
         return v
 
 class DataResponse(BaseModel):
@@ -266,17 +266,32 @@ async def get_categories(limit: int = Query(50, description="Maximum number of c
         raise HTTPException(status_code=500, detail=f"Error retrieving categories: {str(e)}")
 
 @app.post("/data", response_model=DataResponse)
-async def load_bls_data(request: DataRequest):
+async def load_bls_data(request: DataRequest, long_format: bool = Query(False, description="Return data in long format (category, date, index, adjustment)")):
     """Load BLS data for specified categories and date"""
     try:
-        logger.info(f"Loading data for {len(request.categories)} categories, date: {request.date}")
+        logger.info(f"Loading data for {len(request.categories)} categories, date: {request.date}, long_format: {long_format}")
+        
+        # Debug: Test the load_data function directly
+        logger.info("DEBUG: Testing load_data function directly...")
+        test_result = load_data(["All items"], request.date)
+        logger.info(f"DEBUG: Direct load_data result sample: {test_result[0] if test_result else 'No data'}")
         
         # Ensure data is available
         if not ensure_data_available():
             raise HTTPException(status_code=503, detail="BLS data not available. Please try again later.")
         
-        # Load the data
-        data = load_data(request.categories, request.date)
+        # Load the data in the requested format
+        if long_format:
+            # Return as DataFrame converted to records for long format
+            df = load_data_long_format(request.categories, request.date)
+            data = df.to_dict('records') if not df.empty else []
+        else:
+            # Return in original wide format
+            data = load_data(request.categories, request.date)
+        
+        logger.info(f"DEBUG: Actual load_data result count: {len(data)}")
+        if data:
+            logger.info(f"DEBUG: First result sample: {data[0]}")
         
         if not data:
             return DataResponse(
@@ -287,19 +302,20 @@ async def load_bls_data(request: DataRequest):
             )
         
         # Calculate some summary statistics
-        successful_categories = len(data)
+        successful_categories = len(set(item.get('category', '') for item in data)) if long_format else len(data)
         failed_categories = len(request.categories) - successful_categories
         
         return DataResponse(
             success=True,
             data=data,
-            message=f"Successfully loaded data for {successful_categories} categories",
+            message=f"Successfully loaded data for {successful_categories} categories{'in long format' if long_format else ''}",
             metadata={
                 **get_api_metadata(),
                 "requested_categories": len(request.categories),
                 "successful_categories": successful_categories,
                 "failed_categories": failed_categories,
-                "request_date": request.date
+                "request_date": request.date,
+                "format": "long" if long_format else "wide"
             }
         )
         

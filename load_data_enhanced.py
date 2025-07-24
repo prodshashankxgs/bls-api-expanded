@@ -169,27 +169,27 @@ def _find_enhanced_header_columns(df: pd.DataFrame, current_month: str, previous
                 logger.info(f"category column: {col_idx}")
                 continue
             
-            # Look for NSA (Unadjusted) data columns
-            if "unadjusted" in header_cell or "not seasonally adjusted" in header_cell:
+            # Look for NSA (Unadjusted) INDEX columns - NOT percentage columns
+            if "unadjusted indexes" in header_cell:
                 # Check for current month
                 if (current_month_name[:3] in subheader_cell and str(current_year) in subheader_cell):
                     column_map[f'nsa_{current_month}'] = col_idx
-                    logger.info(f"NSA {current_month} column: {col_idx}")
+                    logger.info(f"NSA {current_month} index column: {col_idx}")
                 # Check for previous month
                 elif (previous_month_name[:3] in subheader_cell and str(previous_year) in subheader_cell):
                     column_map[f'nsa_{previous_month}'] = col_idx
-                    logger.info(f"NSA {previous_month} column: {col_idx}")
+                    logger.info(f"NSA {previous_month} index column: {col_idx}")
             
-            # Look for SA (Seasonally Adjusted) data columns
-            elif "seasonally adjusted" in header_cell and "not seasonally adjusted" not in header_cell:
+            # Look for SA (Seasonally Adjusted) INDEX columns - NOT percentage columns
+            elif "seasonally adjusted indexes" in header_cell:
                 # Check for current month
                 if (current_month_name[:3] in subheader_cell and str(current_year) in subheader_cell):
                     column_map[f'sa_{current_month}'] = col_idx
-                    logger.info(f"SA {current_month} column: {col_idx}")
+                    logger.info(f"SA {current_month} index column: {col_idx}")
                 # Check for previous month
                 elif (previous_month_name[:3] in subheader_cell and str(previous_year) in subheader_cell):
                     column_map[f'sa_{previous_month}'] = col_idx
-                    logger.info(f"SA {previous_month} column: {col_idx}")
+                    logger.info(f"SA {previous_month} index column: {col_idx}")
         
         logger.info(f"identified enhanced columns: {column_map}")
         return column_map
@@ -324,6 +324,66 @@ def load_data_to_dataframe(ticker_list: List[str], date: str) -> pd.DataFrame:
     """
     data_list = load_data(ticker_list, date)
     df = pd.DataFrame(data_list)
+    return df
+
+
+def load_data_long_format(ticker_list: List[str], date: str) -> pd.DataFrame:
+    """
+    Load BLS data and return in long format with separate rows for each date/adjustment combination.
+    
+    Args:
+        ticker_list: List of category strings that match exactly with Excel sheet
+        date: Date string in format "YYYY-MM" (e.g., "2025-06")
+        
+    Returns:
+        pandas DataFrame in long format:
+        category   date      index    adjustment
+        cpi        2025-06   322.561  nsa
+        cpi        2025-06   321.500  sa
+        cpi        2025-05   321.465  nsa
+        cpi        2025-05   320.580  sa
+    """
+    # Get the wide format data first
+    data_list = load_data(ticker_list, date)
+    
+    if not data_list:
+        return pd.DataFrame(columns=['category', 'date', 'index', 'adjustment'])
+    
+    # Transform to long format
+    long_data = []
+    
+    for item in data_list:
+        category = item['category']
+        
+        # Extract all the data points
+        for key, value in item.items():
+            if key == 'category':
+                continue
+            
+            # Parse the key to get adjustment type and date
+            if key.startswith('nsa_'):
+                adjustment = 'nsa'
+                date_str = key.replace('nsa_', '')
+            elif key.startswith('sa_'):
+                adjustment = 'sa'
+                date_str = key.replace('sa_', '')
+            else:
+                continue
+            
+            # Add row to long format
+            if pd.notna(value) and value is not None:
+                long_data.append({
+                    'category': category,
+                    'date': date_str,
+                    'index': value,
+                    'adjustment': adjustment
+                })
+    
+    # Create DataFrame and sort by category, date, adjustment
+    df = pd.DataFrame(long_data)
+    if not df.empty:
+        df = df.sort_values(['category', 'date', 'adjustment']).reset_index(drop=True)
+    
     return df
 
 

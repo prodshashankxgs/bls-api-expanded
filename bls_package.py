@@ -356,7 +356,7 @@ def _clean_numeric_value(value) -> Optional[float]:
 
 def show_sample_data():
     """Show sample data for testing"""
-    print("🧪 Sample BLS Data")
+    print("Sample BLS Data")
     print("=" * 50)
     
     try:
@@ -365,41 +365,41 @@ def show_sample_data():
         data = load_data(sample_categories, "2025-06")
         
         if data:
-            print(f"📊 Loaded data for {len(data)} categories:")
+            print(f"Loaded data for {len(data)} categories:")
             for item in data:
                 category = item.get('category', 'Unknown')
                 nsa_prev = item.get('nsa_previous_month', 'N/A')
                 nsa_curr = item.get('nsa_current_month', 'N/A')
-                print(f"   📈 {category}: {nsa_prev} → {nsa_curr}")
+                print(f"   {category}: {nsa_prev} → {nsa_curr}")
         else:
-            print("❌ No data available")
+            print("No data available")
             
     except Exception as e:
-        print(f"❌ Error loading sample data: {e}")
+        print(f"Error loading sample data: {e}")
 
 
 def check_setup():
     """Check if the BLS package is set up correctly"""
-    print("🔍 BLS Package Setup Check")
+    print("BLS Package Setup Check")
     print("=" * 50)
     
     try:
         # Check if we can find the data directory
         data_dir = BLSConfig.get_data_sheet_dir()
-        print(f"✅ Data directory found: {data_dir}")
+        print(f"Data directory found: {data_dir}")
         
         # Check if we can find Excel files
         excel_file = BLSConfig.get_latest_excel_file()
-        print(f"✅ Latest Excel file: {excel_file.name}")
+        print(f"Latest Excel file: {excel_file.name}")
         
         # Check if we can load data
         test_data = load_data(["All items"], "2025-06")
         if test_data:
-            print("✅ Data loading works correctly")
+            print("Data loading works correctly")
         else:
-            print("❌ Data loading failed")
+            print("Data loading failed")
         
-        print("\n🎉 BLS Package is ready to use!")
+        print("\nBLS Package is ready to use!")
         return True
         
     except Exception as e:
