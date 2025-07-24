@@ -188,28 +188,25 @@ def _extract_ticker_data(df: pd.DataFrame, ticker: str, header_info: Dict[str, i
             logger.warning(f"ticker '{ticker}' not found in excel data")
             return None
         
-        # extract the values
+        # extract the values with dates as column headers
         result = {
-            'category': ticker,
-            'current_month': current_month,
-            'previous_month': previous_month
+            'category': ticker
         }
         
         # extract NSA values (unadjusted indexes)
         if 'nsa_may_2025' in header_info:
             may_2025_col = header_info['nsa_may_2025']
             may_2025_value = df.iloc[matching_row, may_2025_col]
-            result['nsa_previous_month'] = _clean_numeric_value(may_2025_value)
+            result[f'nsa_{previous_month}'] = _clean_numeric_value(may_2025_value)
         
         if 'nsa_jun_2025' in header_info:
             jun_2025_col = header_info['nsa_jun_2025']
             jun_2025_value = df.iloc[matching_row, jun_2025_col]
-            result['nsa_current_month'] = _clean_numeric_value(jun_2025_value)
+            result[f'nsa_{current_month}'] = _clean_numeric_value(jun_2025_value)
         
-        # since there are no adjusted indexes, we'll just return the unadjusted (NSA) values
-        # and set SA values to be the same as NSA values
-        result['sa_previous_month'] = result.get('nsa_previous_month')
-        result['sa_current_month'] = result.get('nsa_current_month')
+        # Add SA values (seasonally adjusted) - use same as NSA if not available separately
+        result[f'sa_{previous_month}'] = result.get(f'nsa_{previous_month}')
+        result[f'sa_{current_month}'] = result.get(f'nsa_{current_month}')
         
         logger.info(f"extracted data for '{ticker}': {result}")
         return result

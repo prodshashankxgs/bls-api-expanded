@@ -44,7 +44,8 @@ if str(current_dir) not in sys.path:
 
 # Import our BLS components
 try:
-    from bls_package import load_data, get_available_categories, check_setup
+    from bls_package import get_available_categories, check_setup
+    from load_data_enhanced import load_data, load_data_to_dataframe, calculate_inflation_rates
     from config import Config
     from scraper import BLSScraper
 except ImportError as e:
