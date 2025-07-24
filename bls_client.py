@@ -43,16 +43,16 @@ class BLSClient:
             response = self.session.get(f"{self.api_url}/health", timeout=5)
             if response.status_code == 200:
                 health_data = response.json()
-                print(f"✅ Connected to BLS API at {self.api_url}")
-                print(f"   Data available: {health_data.get('data_available', 'Unknown')}")
+                print(f"connected to bls api at {self.api_url}")
+                print(f"   data available: {health_data.get('data_available', 'unknown')}")
                 return True
             else:
-                print(f"⚠️  API responded with status {response.status_code}")
+                print(f"api responded with status {response.status_code}")
                 return False
         except Exception as e:
-            print(f"❌ Cannot connect to BLS API at {self.api_url}")
-            print(f"   Error: {e}")
-            print(f"   Make sure the API server is running!")
+            print(f"cannot connect to bls api at {self.api_url}")
+            print(f"   error: {e}")
+            print(f"   make sure the api server is running!")
             return False
     
     def get_categories(self, limit: int = 50) -> List[str]:
@@ -72,13 +72,43 @@ class BLSClient:
             data = response.json()
             categories = data.get("categories", [])
             
-            print(f"📋 Retrieved {len(categories)} available categories")
+            print(f"retrieved {len(categories)} available categories")
             return categories
             
         except Exception as e:
-            print(f"❌ Error getting categories: {e}")
+            print(f"error getting categories: {e}")
             return []
     
+    def load_data(self, categories: List[str], date: str):
+        """
+        Load and print BLS data with actual index values and separate NSA/SA columns
+        
+        Args:
+            categories: List of BLS category names
+            date: Date in YYYY-MM format
+        """
+        df = self.get_data(categories, date)
+        
+        if df is not None:
+            # Create processed dataframe with separate NSA/SA columns
+            result_df = df[['category']].copy()
+            
+            # Add NSA columns
+            nsa_cols = [col for col in df.columns if col.startswith('nsa_')]
+            for nsa_col in nsa_cols:
+                date_part = nsa_col.replace('nsa_', '')
+                result_df[f'nsa_{date_part}'] = df[nsa_col]
+            
+            # Add SA columns  
+            sa_cols = [col for col in df.columns if col.startswith('sa_')]
+            for sa_col in sa_cols:
+                date_part = sa_col.replace('sa_', '')
+                result_df[f'sa_{date_part}'] = df[sa_col]
+            
+            print(result_df)
+        else:
+            print("failed to load data")
+
     def get_data(self, categories: List[str], date: str) -> Optional[pd.DataFrame]:
         """
         Get BLS data for specified categories and date
@@ -123,20 +153,20 @@ class BLSClient:
                 data = result.get("data", [])
                 if data:
                     df = pd.DataFrame(data)
-                    print(f"✅ Successfully loaded data for {len(df)} categories")
+                    print(f"successfully loaded data for {len(df)} categories")
                     return df
                 else:
-                    print(f"⚠️  No data found for the specified categories and date {date}")
+                    print(f"no data found for the specified categories and date {date}")
                     return None
             else:
-                print(f"❌ API error: {result.get('message', 'Unknown error')}")
+                print(f"api error: {result.get('message', 'unknown error')}")
                 return None
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Network error: {e}")
+            print(f"network error: {e}")
             return None
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            print(f"unexpected error: {e}")
             return None
     
     def get_inflation_analysis(self, categories: List[str], date: str) -> Optional[pd.DataFrame]:
@@ -160,7 +190,7 @@ class BLSClient:
             # Add inflation indicators
             df['inflation_level'] = df['mom_change_pct'].apply(self._get_inflation_level)
             
-            print(f"📊 Calculated inflation rates for {len(df)} categories")
+            print(f"calculated inflation rates for {len(df)} categories")
             
         return df
     
@@ -214,7 +244,7 @@ class BLSClient:
             "Medical care"
         ]
         
-        print(f"🚀 Running quick inflation analysis for {date}")
+        print(f"running quick analysis for {date}")
         return self.get_inflation_analysis(common_categories, date)
 
 # Convenience functions for direct usage
@@ -230,7 +260,7 @@ def get_bls_data(api_url: str, categories: List[str], date: str) -> Optional[pd.
 # Example usage
 if __name__ == "__main__":
     # Test the client
-    print("🧪 Testing BLS API Client")
+    print("testing bls api client")
     print("=" * 40)
     
     # Create client (adjust URL as needed)
@@ -240,7 +270,12 @@ if __name__ == "__main__":
     df = client.quick_analysis("2025-06")
     
     if df is not None:
-        print("\n📊 Quick Analysis Results:")
-        print(df[['category', 'mom_change_pct', 'inflation_level']].to_string(index=False))
+        print("\nactual index values:")
+        # Show actual index values, not calculated percentages
+        nsa_cols = [col for col in df.columns if col.startswith('nsa_') and 'mom' not in col]
+        sa_cols = [col for col in df.columns if col.startswith('sa_') and 'mom' not in col]
+        display_cols = ['category'] + nsa_cols[:2] + sa_cols[:2]
+        available_cols = [col for col in display_cols if col in df.columns]
+        print(df[available_cols].to_string(index=False))
     else:
-        print("❌ Test failed - make sure the API server is running")
+        print("test failed - make sure the api server is running")

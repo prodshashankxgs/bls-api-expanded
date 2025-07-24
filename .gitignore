@@ -199,7 +199,7 @@ examples_generated/
 # *.ipynb  # Commented out to allow notebook files in repo
 
 # Allow important notebooks to be tracked
-!BLS_API_Test_Notebook.ipynb
+!bls_api_test.ipynb
 !*_example.ipynb
 !*_demo.ipynb
 
