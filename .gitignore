@@ -196,7 +196,12 @@ examples_generated/
 
 # jupyter notebook checkpoints
 .ipynb_checkpoints/
-*.ipynb
+# *.ipynb  # Commented out to allow notebook files in repo
+
+# Allow important notebooks to be tracked
+!BLS_API_Test_Notebook.ipynb
+!*_example.ipynb
+!*_demo.ipynb
 
 # ================================
 # deployment and containerization
