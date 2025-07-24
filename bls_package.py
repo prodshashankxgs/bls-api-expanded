@@ -403,14 +403,14 @@ def check_setup():
         return True
         
     except Exception as e:
-        print(f"❌ Setup check failed: {e}")
-        print("\n💡 Try running 'python run.py' first to download data")
+        print(f"Setup check failed: {e}")
+        print("Try running 'python run.py' first to download data")
         return False
 
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("🏛️  BLS Data Package")
+    print("BLS Data Package")
     print("=" * 50)
     
     # Check setup
@@ -419,12 +419,12 @@ if __name__ == "__main__":
         show_sample_data()
         
         # Show available categories
-        print("\n📋 Available Categories (sample):")
+        print("Available Categories (sample):")
         categories = get_available_categories(10)
         for i, cat in enumerate(categories, 1):
             print(f"   {i:2d}. {cat}")
     
-    print("\n📚 Usage Examples:")
-    print("   from bls_package import load_data, load_data_to_dataframe")
-    print("   data = load_data(['All items', 'Food'], '2025-06')")
-    print("   df = load_data_to_dataframe(['Energy', 'Shelter'], '2025-06')")
+    print("Usage Examples:")
+    print("from bls_package import load_data, load_data_to_dataframe")
+    print("data = load_data(['All items', 'Food'], '2025-06')")
+    print("df = load_data_to_dataframe(['Energy', 'Shelter'], '2025-06')")
